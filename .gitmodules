@@ -1,0 +1,3 @@
+[submodule "MADRL"]
+	path = MADRL
+	url = https://github.com/sisl/MADRL.git
