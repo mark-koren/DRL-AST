@@ -1,8 +1,7 @@
-from ..rllab.rllab.envs.base import Env
-from ..rllab.rllab.envs.base import Step
-from ..rllab.rllab.spaces import Box
+from rllab.envs.base import Env
+from rllab.envs.base import Step
+from rllab.spaces import Box
 import numpy as np
-
 class CrosswalkEnv(Env):
     def step(self, action):
         """

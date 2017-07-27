@@ -1,6 +1,6 @@
-from ..rllab.rllab.envs.base import Env
-from ..rllab.rllab.envs.base import Step
-from ..rllab.rllab.spaces import Box
+from rllab.envs.base import Env
+from rllab.envs.base import Step
+from rllab.spaces import Box
 import numpy as np
 
 class CrosswalkSensorEnv(Env):
@@ -72,6 +72,7 @@ class CrosswalkSensorEnv(Env):
         self._state = np.array([v_new, x_c, y_c, x_p, y_p])
         self._step += 1
         observation = np.array([v_new, x_d_new, y_d_new])
+        # print('Step Taken ' + str(self._step))
         return Step(observation=observation, reward=reward, done=done, info={'cache':cache})
 
     def mahalanobis_d(self, action):
