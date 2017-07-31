@@ -5,14 +5,15 @@ import numpy as np
 
 import pdb
 
-class CrosswalkEnv(Env):
+class CrosswalkSensorEnv(Env):
     def __init__(self, ego, num_peds, dt, alpha, beta, v_des, delta, t_headway,
                  a_max, s_min, d_cmf, min_dist_x, min_dist_y,
                  x_accel_low, y_accel_low, x_accel_high,y_accel_high,
                  x_boundary_low, y_boundary_low, x_boundary_high, y_boundary_high,
                  x_v_low, y_v_low, x_v_high, y_v_high,
                  mean_x, mean_y, cov_x, cov_y,
-                car_init_x, car_init_y):
+                car_init_x, car_init_y,
+                 mean_sensor_noise, cov_sensor_noise):
         #Constant hyper-params -- set by user
         self.c_num_peds = num_peds
         self.c_dt = dt
@@ -43,6 +44,8 @@ class CrosswalkEnv(Env):
         self.c_cov_y = cov_y
         self.c_car_init_x = car_init_x
         self.c_car_init_y = car_init_y
+        self.c_mean_sensor_noise = mean_sensor_noise
+        self.c_cov_sensor_noise = cov_sensor_noise
 
         #These are set by reset, not the user
         self._car = np.zeros((4))
@@ -103,11 +106,11 @@ class CrosswalkEnv(Env):
         #bundle = G(self._state)
         #mean = G[0:2].T
         #cov = np.array([[G[2], 0],[0, G[3]])
-        mean = np.zeros((2*self.c_num_peds,1))
+        mean = np.zeros((4*self.c_num_peds,1))
         # mean = np.array([[self.c_mean_x],[self.c_mean_y]])
         # cov = np.array([[self.c_cov_x, 0], [0, self.c_cov_y]])
-        cov = np.zeros((self.c_num_peds, 2))
-        cov[:,0:2] = np.array([self.c_cov_x, self.c_cov_y])
+        cov = np.zeros((self.c_num_peds, 4))
+        cov[:,0:4] = np.array([self.c_cov_x, self.c_cov_y, 0.1, 0.1])
         big_cov = np.diagflat(cov)
 
         # inv_cov = np.linalg.inv(cov)
@@ -160,12 +163,12 @@ class CrosswalkEnv(Env):
         """
         Returns a Space object
         """
-        low = np.array([self.c_x_accel_low,self.c_y_accel_low])
-        high = np.array([self.c_x_accel_high, self.c_y_accel_high])
+        low = np.array([self.c_x_accel_low,self.c_y_accel_low, 0.0, 0.0])
+        high = np.array([self.c_x_accel_high, self.c_y_accel_high, 1.0, 1.0])
 
         for i in range(1, self.c_num_peds):
-            low = np.hstack((low, np.array([self.c_x_accel_low,self.c_y_accel_low])))
-            high = np.hstack((high, np.array([self.c_x_accel_high,self.c_y_accel_high])))
+            low = np.hstack((low, np.array([self.c_x_accel_low,self.c_y_accel_low, 0.0, 0.0])))
+            high = np.hstack((high, np.array([self.c_x_accel_high,self.c_y_accel_high, 1.0, 1.0])))
 
         return Box(low=low, high=high)
 
@@ -243,9 +246,9 @@ class CrosswalkEnv(Env):
 
     def update_peds(self):
         #Update ped state from actions
-        action = self._action.reshape((self.c_num_peds, 2))
+        action = self._action.reshape((self.c_num_peds, 4))[:, 0:2]
 
-        mod_a = np.hstack((action,
+        mod_a = np.hstack((np.expand_dims(action, axis=0),
                            self._peds[:, 0:2] + 0.5 * self.c_dt * action))
         if np.any(np.isnan(mod_a)):
             pdb.set_trace()
