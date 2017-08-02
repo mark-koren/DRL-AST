@@ -18,7 +18,7 @@ import tensorflow as tf
 
 parser = argparse.ArgumentParser()
 #Algo Params
-parser.add_argument('--iters', type=int, default=1)
+parser.add_argument('--iters', type=int, default=10)
 parser.add_argument('--batch_size', type=int, default=4000)
 parser.add_argument('--step_size', type=float, default=0.1)
 parser.add_argument('--store_paths', type=bool, default=True)
