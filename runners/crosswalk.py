@@ -18,7 +18,7 @@ import tensorflow as tf
 
 parser = argparse.ArgumentParser()
 #Algo Params
-parser.add_argument('--iters', type=int, default=401)
+parser.add_argument('--iters', type=int, default=1)
 parser.add_argument('--batch_size', type=int, default=4000)
 parser.add_argument('--step_size', type=float, default=0.1)
 parser.add_argument('--store_paths', type=bool, default=True)
@@ -29,7 +29,7 @@ parser.add_argument('--text_log_file', type=str, default='tex.txt')
 parser.add_argument('--params_log_file', type=str, default='args.txt')
 parser.add_argument('--snapshot_mode', type=str, default='all')
 parser.add_argument('--log_tabular_only', type=bool, default=False)
-parser.add_argument('--log_dir', type=str, default='.')
+parser.add_argument('--log_dir', type=str, default='../../../../scratch/mkoren/run1')
 parser.add_argument('--args_data', type=str, default=None)
 #Environement Params
 
