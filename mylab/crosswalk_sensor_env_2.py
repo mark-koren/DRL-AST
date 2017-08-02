@@ -7,7 +7,7 @@ import pdb
 
 class CrosswalkSensorEnv(Env):
     def __init__(self, ego, num_peds, dt, alpha, beta, v_des, delta, t_headway,
-                 a_max, s_min, d_cmf, min_dist_x, min_dist_y,
+                 a_max, s_min, d_cmf, d_max, min_dist_x, min_dist_y,
                  x_accel_low, y_accel_low, x_accel_high,y_accel_high,
                  x_boundary_low, y_boundary_low, x_boundary_high, y_boundary_high,
                  x_v_low, y_v_low, x_v_high, y_v_high,
@@ -25,6 +25,7 @@ class CrosswalkSensorEnv(Env):
         self.c_a_max = a_max
         self.c_s_min = s_min
         self.c_d_cmf = d_cmf
+        self.c_d_max = d_max
         self.c_min_dist = np.array([min_dist_x, min_dist_y])
         self.c_x_accel_low = x_accel_low
         self.c_y_accel_low = y_accel_low
@@ -85,8 +86,8 @@ class CrosswalkSensorEnv(Env):
         #Move the car from accel decided at last step
         self._car = self.move_car(self._car, self._car_accel)
         #Give the car the noisy measurements
-        noise = action.reshape((self.c_num_peds,4))[:,2:4]
-        self._measurements = self.sensors(self._car, self._peds, np.hstack([noise, noise]))
+        noise = action.reshape((self.c_num_peds,6))[:,2:6]
+        self._measurements = self.sensors(self._car, self._peds, noise)
         #Use Alpha-Beta tracker to update car observation
         self._car_obs = self.tracker(self._car_obs, self._measurements)
         #Decide the accel for next step
@@ -107,11 +108,13 @@ class CrosswalkSensorEnv(Env):
         #bundle = G(self._state)
         #mean = G[0:2].T
         #cov = np.array([[G[2], 0],[0, G[3]])
-        mean = np.zeros((4*self.c_num_peds,1))
+        mean = np.zeros((6*self.c_num_peds,1))
         # mean = np.array([[self.c_mean_x],[self.c_mean_y]])
         # cov = np.array([[self.c_cov_x, 0], [0, self.c_cov_y]])
-        cov = np.zeros((self.c_num_peds, 4))
-        cov[:,0:4] = np.array([self.c_cov_x, self.c_cov_y, self.c_cov_sensor_noise, self.c_cov_sensor_noise])
+        cov = np.zeros((self.c_num_peds, 6))
+        cov[:,0:6] = np.array([self.c_cov_x, self.c_cov_y,
+                               self.c_cov_sensor_noise, self.c_cov_sensor_noise,
+                               self.c_cov_sensor_noise, self.c_cov_sensor_noise])
         big_cov = np.diagflat(cov)
 
         # inv_cov = np.linalg.inv(cov)
@@ -164,12 +167,12 @@ class CrosswalkSensorEnv(Env):
         """
         Returns a Space object
         """
-        low = np.array([self.c_x_accel_low,self.c_y_accel_low, 0.0, 0.0])
-        high = np.array([self.c_x_accel_high, self.c_y_accel_high, 1.0, 1.0])
+        low = np.array([self.c_x_accel_low,self.c_y_accel_low, 0.0, 0.0, 0.0, 0.0])
+        high = np.array([self.c_x_accel_high, self.c_y_accel_high, 1.0, 1.0, 1.0, 1.0])
 
         for i in range(1, self.c_num_peds):
-            low = np.hstack((low, np.array([self.c_x_accel_low,self.c_y_accel_low, 0.0, 0.0])))
-            high = np.hstack((high, np.array([self.c_x_accel_high,self.c_y_accel_high, 1.0, 1.0])))
+            low = np.hstack((low, np.array([self.c_x_accel_low,self.c_y_accel_low, 0.0, 0.0, 0.0, 0.0])))
+            high = np.hstack((high, np.array([self.c_x_accel_high,self.c_y_accel_high, 1.0, 1.0, 1.0, 1.0])))
 
         return Box(low=low, high=high)
 
@@ -238,7 +241,8 @@ class CrosswalkSensorEnv(Env):
         a = self.c_a_max * (1.0 - v_ratio**self.c_delta - (s_des/s_headway)**2)
         if np.isnan(a):
             pdb.set_trace()
-        return a
+
+        return np.clip(a, -self.c_d_max, self.c_a_max)
 
     def move_car(self, car, accel):
         car[2:4] += self.c_dt * car[0:2]
@@ -247,7 +251,7 @@ class CrosswalkSensorEnv(Env):
 
     def update_peds(self):
         #Update ped state from actions
-        action = self._action.reshape((self.c_num_peds, 4))[:, 0:2]
+        action = self._action.reshape((self.c_num_peds, 6))[:, 0:2]
 
         mod_a = np.hstack((action,
                            self._peds[:, 0:2] + 0.5 * self.c_dt * action))

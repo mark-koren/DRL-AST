@@ -43,6 +43,7 @@ parser.add_argument('--t_headway', type=float, default=1.5)
 parser.add_argument('--a_max', type=float, default=3.0)
 parser.add_argument('--s_min', type=float, default=2.0)
 parser.add_argument('--d_cmf', type=float, default=2.0)
+parser.add_argument('--d_max', type=float, default=9.0)
 parser.add_argument('--min_dist_x', type=float, default=2.925)
 parser.add_argument('--min_dist_y', type=float, default=1.415)
 parser.add_argument('--car_init_x', type=float, default=-35.0)
@@ -96,6 +97,7 @@ env = TfEnv(normalize(CrosswalkSensorEnv(ego=None,
                                    a_max=args.a_max,
                                    s_min=args.s_min,
                                    d_cmf=args.d_cmf,
+                                   d_max=args.d_max,
                                    min_dist_x=args.min_dist_x,
                                    min_dist_y=args.min_dist_y,
                                    x_accel_low=args.x_accel_low,
