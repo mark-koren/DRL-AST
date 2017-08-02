@@ -85,7 +85,8 @@ class CrosswalkSensorEnv(Env):
         #Move the car from accel decided at last step
         self._car = self.move_car(self._car, self._car_accel)
         #Give the car the noisy measurements
-        self._measurements = self.sensors(self._car, self._peds, np.zeros_like(self._peds))
+        noise = action.reshape((self.c_num_peds,4))[:,2:4]
+        self._measurements = self.sensors(self._car, self._peds, np.hstack([noise, noise]))
         #Use Alpha-Beta tracker to update car observation
         self._car_obs = self.tracker(self._car_obs, self._measurements)
         #Decide the accel for next step
@@ -110,7 +111,7 @@ class CrosswalkSensorEnv(Env):
         # mean = np.array([[self.c_mean_x],[self.c_mean_y]])
         # cov = np.array([[self.c_cov_x, 0], [0, self.c_cov_y]])
         cov = np.zeros((self.c_num_peds, 4))
-        cov[:,0:4] = np.array([self.c_cov_x, self.c_cov_y, 0.1, 0.1])
+        cov[:,0:4] = np.array([self.c_cov_x, self.c_cov_y, self.c_cov_sensor_noise, self.c_cov_sensor_noise])
         big_cov = np.diagflat(cov)
 
         # inv_cov = np.linalg.inv(cov)
@@ -240,15 +241,15 @@ class CrosswalkSensorEnv(Env):
         return a
 
     def move_car(self, car, accel):
-        car[2:4] += car[0:2]
-        car[0:2] += accel
+        car[2:4] += self.c_dt * car[0:2]
+        car[0:2] += self.c_dt * accel
         return car
 
     def update_peds(self):
         #Update ped state from actions
         action = self._action.reshape((self.c_num_peds, 4))[:, 0:2]
 
-        mod_a = np.hstack((np.expand_dims(action, axis=0),
+        mod_a = np.hstack((action,
                            self._peds[:, 0:2] + 0.5 * self.c_dt * action))
         if np.any(np.isnan(mod_a)):
             pdb.set_trace()
@@ -273,7 +274,7 @@ class CrosswalkSensorEnv(Env):
             self._done = False
             self._reward = -np.log(1 + self.mahalanobis_d(self._action))
 
-        if np.any(dist < -10.0):
+        if np.any(dist < -10.0) or self._step > 100:
             self._done = True
 
     def observe(self):

@@ -8,7 +8,7 @@ from rllab.envs.normalized_env import normalize
 import rllab.misc.logger as logger
 
 from mylab.crosswalk_env_2 import CrosswalkEnv
-from mylab.crosswalk_sensor_env import CrosswalkSensorEnv
+from mylab.crosswalk_sensor_env_2 import CrosswalkSensorEnv
 
 import os.path as osp
 import argparse
@@ -34,7 +34,7 @@ parser.add_argument('--args_data', type=str, default=None)
 #Environement Params
 
 parser.add_argument('--dt', type=float, default=0.1)
-parser.add_argument('--num_peds', type=int, default=2)
+parser.add_argument('--num_peds', type=int, default=1)
 parser.add_argument('--alpha', type=float, default=0.8)
 parser.add_argument('--beta', type=float, default=0.8)
 parser.add_argument('--v_des', type=float, default=11.17)
@@ -85,7 +85,7 @@ logger.set_snapshot_mode(args.snapshot_mode)
 logger.set_log_tabular_only(args.log_tabular_only)
 logger.push_prefix("[%s] " % args.exp_name)
 
-env = TfEnv(normalize(CrosswalkEnv(ego=None,
+env = TfEnv(normalize(CrosswalkSensorEnv(ego=None,
                                    num_peds=args.num_peds,
                                    dt=args.dt,
                                    alpha = args.alpha,
@@ -115,7 +115,9 @@ env = TfEnv(normalize(CrosswalkEnv(ego=None,
                                    cov_x=args.cov_x,
                                    cov_y=args.cov_y,
                                    car_init_x=args.car_init_x,
-                                   car_init_y=args.car_init_y)))
+                                   car_init_y=args.car_init_y,
+                                   mean_sensor_noise = 0.0,
+                                   cov_sensor_noise = 0.1)))
 policy = GaussianMLPPolicy(name='mlp_policy',
                            env_spec=env.spec,
                            hidden_sizes=(512, 256, 128, 64, 32))
@@ -131,13 +133,25 @@ algo = TRPO(
     n_itr=args.iters,
     store_paths=args.store_paths
 )
+saver = tf.train.Saver()
 with tf.Session() as sess:
     algo.train(sess=sess)
 
-    header = 'trial, step, ' +\
-             'v_x_car, v_y_car, x_car, y_car, ' +\
-             'v_x_ped, v_y_ped, x_ped, y_ped,' +\
-             'a_x, a_y,' +\
-             'reward'
+    header = 'trial, step, ' + 'v_x_car, v_y_car, x_car, y_car, '
+    for i in range(0,args.num_peds):
+        header += 'v_x_ped_' + str(i) + ','
+        header += 'v_y_ped_' + str(i) + ','
+        header += 'x_ped_' + str(i) + ','
+        header += 'y_ped_' + str(i) + ','
+
+    for i in range(0,args.num_peds):
+        header += 'a_x_'  + str(i) + ','
+        header += 'a_y_' + str(i) + ','
+        header += 'noise_x_' + str(i) + ','
+        header += 'noise_y_' + str(i) + ','
+
+    header += 'reward'
     save_trials(args.iters, args.log_dir, header, sess)
+    saver.save(sess, 'test_model')
+
 
