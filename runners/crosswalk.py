@@ -5,6 +5,7 @@ from sandbox.rocky.tf.envs.base import TfEnv
 from rllab.baselines.linear_feature_baseline import LinearFeatureBaseline
 from rllab.baselines.zero_baseline import ZeroBaseline
 from rllab.envs.normalized_env import normalize
+from rllab.sampler import parallel_sampler
 import rllab.misc.logger as logger
 
 from mylab.crosswalk_env_2 import CrosswalkEnv
@@ -125,7 +126,7 @@ policy = GaussianMLPPolicy(name='mlp_policy',
                            hidden_sizes=(512, 256, 128, 64, 32))
 baseline = LinearFeatureBaseline(env_spec=env.spec)
 
-
+parallel_sampler.initialize(n_parallel=8)
 algo = TRPO(
     env=env,
     policy=policy,
