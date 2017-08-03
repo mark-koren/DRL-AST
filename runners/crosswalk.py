@@ -66,9 +66,8 @@ parser.add_argument('--mean_y', type=float, default=0.0)
 parser.add_argument('--cov_x', type=float, default=0.1)
 parser.add_argument('--cov_y', type=float, default=0.01)
 
-
-
-
+parser.add_argument('--snapshot_mode', type=str, default="gap")
+parser.add_argument('--snapshot_gap', type=int, default=100)
 
 args = parser.parse_args()
 log_dir = args.log_dir
@@ -84,6 +83,7 @@ prev_snapshot_dir = logger.get_snapshot_dir()
 prev_mode = logger.get_snapshot_mode()
 logger.set_snapshot_dir(log_dir)
 logger.set_snapshot_mode(args.snapshot_mode)
+logger.set_snapshot_gap(args.snapshot_gap)
 logger.set_log_tabular_only(args.log_tabular_only)
 logger.push_prefix("[%s] " % args.exp_name)
 
@@ -126,7 +126,7 @@ policy = GaussianMLPPolicy(name='mlp_policy',
                            hidden_sizes=(512, 256, 128, 64, 32))
 baseline = LinearFeatureBaseline(env_spec=env.spec)
 
-parallel_sampler.initialize(n_parallel=8)
+parallel_sampler.initialize(n_parallel=4)
 algo = TRPO(
     env=env,
     policy=policy,
