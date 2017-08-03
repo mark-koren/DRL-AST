@@ -154,7 +154,7 @@ with tf.Session() as sess:
         header += 'noise_y_' + str(i) + ','
 
     header += 'reward'
-    save_trials(args.iters, args.log_dir, header, sess)
-    saver.save(sess, 'test_model')
+    save_trials(args.iters, args.log_dir, header, sess, save_every_n=args.snapshot_gap)
+    saver.save(sess, args.exp_name)
 
 
