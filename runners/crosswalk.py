@@ -19,7 +19,7 @@ import tensorflow as tf
 
 parser = argparse.ArgumentParser()
 #Algo Params
-parser.add_argument('--iters', type=int, default=1500)
+parser.add_argument('--iters', type=int, default=101)
 parser.add_argument('--batch_size', type=int, default=4000)
 parser.add_argument('--step_size', type=float, default=0.1)
 parser.add_argument('--store_paths', type=bool, default=True)
@@ -28,14 +28,15 @@ parser.add_argument('--exp_name', type=str, default='crosswalk_exp')
 parser.add_argument('--tabular_log_file', type=str, default='tab.txt')
 parser.add_argument('--text_log_file', type=str, default='tex.txt')
 parser.add_argument('--params_log_file', type=str, default='args.txt')
-parser.add_argument('--snapshot_mode', type=str, default='all')
+parser.add_argument('--snapshot_mode', type=str, default="gap")
+parser.add_argument('--snapshot_gap', type=int, default=100)
 parser.add_argument('--log_tabular_only', type=bool, default=False)
 parser.add_argument('--log_dir', type=str, default='../../../../scratch/mkoren/run1')
 parser.add_argument('--args_data', type=str, default=None)
 #Environement Params
 
 parser.add_argument('--dt', type=float, default=0.1)
-parser.add_argument('--num_peds', type=int, default=100)
+parser.add_argument('--num_peds', type=int, default=10)
 parser.add_argument('--alpha', type=float, default=0.8)
 parser.add_argument('--beta', type=float, default=0.8)
 parser.add_argument('--v_des', type=float, default=11.17)
@@ -66,8 +67,6 @@ parser.add_argument('--mean_y', type=float, default=0.0)
 parser.add_argument('--cov_x', type=float, default=0.1)
 parser.add_argument('--cov_y', type=float, default=0.01)
 
-parser.add_argument('--snapshot_mode', type=str, default="gap")
-parser.add_argument('--snapshot_gap', type=int, default=100)
 
 args = parser.parse_args()
 log_dir = args.log_dir
