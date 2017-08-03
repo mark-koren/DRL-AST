@@ -8,7 +8,6 @@ from rllab.envs.normalized_env import normalize
 from rllab.sampler import parallel_sampler
 from rllab.sampler.stateful_pool import singleton_pool
 import rllab.misc.logger as logger
-from rllab.misc.instrument import run_experiment_lite
 
 from mylab.crosswalk_env_2 import CrosswalkEnv
 from mylab.crosswalk_sensor_env_2 import CrosswalkSensorEnv
@@ -77,92 +76,86 @@ tabular_log_file = osp.join(log_dir, args.tabular_log_file)
 text_log_file = osp.join(log_dir, args.text_log_file)
 params_log_file = osp.join(log_dir, args.params_log_file)
 
-def run_task(*_):
-    logger.log_parameters_lite(params_log_file, args)
-    logger.add_text_output(text_log_file)
-    logger.add_tabular_output(tabular_log_file)
-    prev_snapshot_dir = logger.get_snapshot_dir()
-    prev_mode = logger.get_snapshot_mode()
-    logger.set_snapshot_dir(log_dir)
-    logger.set_snapshot_mode(args.snapshot_mode)
-    logger.set_snapshot_gap(args.snapshot_gap)
-    logger.set_log_tabular_only(args.log_tabular_only)
-    logger.push_prefix("[%s] " % args.exp_name)
+logger.log_parameters_lite(params_log_file, args)
+logger.add_text_output(text_log_file)
+logger.add_tabular_output(tabular_log_file)
+prev_snapshot_dir = logger.get_snapshot_dir()
+prev_mode = logger.get_snapshot_mode()
+logger.set_snapshot_dir(log_dir)
+logger.set_snapshot_mode(args.snapshot_mode)
+logger.set_snapshot_gap(args.snapshot_gap)
+logger.set_log_tabular_only(args.log_tabular_only)
+logger.push_prefix("[%s] " % args.exp_name)
 
-    env = TfEnv(normalize(CrosswalkSensorEnv(ego=None,
-                                       num_peds=args.num_peds,
-                                       dt=args.dt,
-                                       alpha = args.alpha,
-                                       beta = args.beta,
-                                       v_des=args.v_des,
-                                       delta=args.delta,
-                                       t_headway=args.t_headway,
-                                       a_max=args.a_max,
-                                       s_min=args.s_min,
-                                       d_cmf=args.d_cmf,
-                                       d_max=args.d_max,
-                                       min_dist_x=args.min_dist_x,
-                                       min_dist_y=args.min_dist_y,
-                                       x_accel_low=args.x_accel_low,
-                                       y_accel_low=args.y_accel_low,
-                                       x_accel_high=args.x_accel_high,
-                                       y_accel_high=args.y_accel_high,
-                                       x_boundary_low=args.x_boundary_low,
-                                       y_boundary_low=args.y_boundary_low,
-                                       x_boundary_high=args.x_boundary_high,
-                                       y_boundary_high=args.y_boundary_high,
-                                       x_v_low=args.x_v_low,
-                                       y_v_low=args.y_v_low,
-                                       x_v_high=args.x_v_high,
-                                       y_v_high=args.y_v_high,
-                                       mean_x=args.mean_x,
-                                       mean_y=args.mean_y,
-                                       cov_x=args.cov_x,
-                                       cov_y=args.cov_y,
-                                       car_init_x=args.car_init_x,
-                                       car_init_y=args.car_init_y,
-                                       mean_sensor_noise = 0.0,
-                                       cov_sensor_noise = 0.1)))
-    policy = GaussianMLPPolicy(name='mlp_policy',
-                               env_spec=env.spec,
-                               hidden_sizes=(512, 256, 128, 64, 32))
-    baseline = LinearFeatureBaseline(env_spec=env.spec)
+env = TfEnv(normalize(CrosswalkSensorEnv(ego=None,
+                                   num_peds=args.num_peds,
+                                   dt=args.dt,
+                                   alpha = args.alpha,
+                                   beta = args.beta,
+                                   v_des=args.v_des,
+                                   delta=args.delta,
+                                   t_headway=args.t_headway,
+                                   a_max=args.a_max,
+                                   s_min=args.s_min,
+                                   d_cmf=args.d_cmf,
+                                   d_max=args.d_max,
+                                   min_dist_x=args.min_dist_x,
+                                   min_dist_y=args.min_dist_y,
+                                   x_accel_low=args.x_accel_low,
+                                   y_accel_low=args.y_accel_low,
+                                   x_accel_high=args.x_accel_high,
+                                   y_accel_high=args.y_accel_high,
+                                   x_boundary_low=args.x_boundary_low,
+                                   y_boundary_low=args.y_boundary_low,
+                                   x_boundary_high=args.x_boundary_high,
+                                   y_boundary_high=args.y_boundary_high,
+                                   x_v_low=args.x_v_low,
+                                   y_v_low=args.y_v_low,
+                                   x_v_high=args.x_v_high,
+                                   y_v_high=args.y_v_high,
+                                   mean_x=args.mean_x,
+                                   mean_y=args.mean_y,
+                                   cov_x=args.cov_x,
+                                   cov_y=args.cov_y,
+                                   car_init_x=args.car_init_x,
+                                   car_init_y=args.car_init_y,
+                                   mean_sensor_noise = 0.0,
+                                   cov_sensor_noise = 0.1)))
+policy = GaussianMLPPolicy(name='mlp_policy',
+                           env_spec=env.spec,
+                           hidden_sizes=(512, 256, 128, 64, 32))
+baseline = LinearFeatureBaseline(env_spec=env.spec)
 
-    # parallel_sampler.initialize(n_parallel=4)
-    singleton_pool.initialize(n_parallel=4)
-    algo = TRPO(
-        env=env,
-        policy=policy,
-        baseline=LinearFeatureBaseline(env_spec=env.spec),
-        batch_size=args.batch_size,
-        step_size=args.step_size,
-        n_itr=args.iters,
-        store_paths=args.store_paths
-    )
-    saver = tf.train.Saver()
-    with tf.Session() as sess:
-        algo.train(sess=sess)
-
-        header = 'trial, step, ' + 'v_x_car, v_y_car, x_car, y_car, '
-        for i in range(0,args.num_peds):
-            header += 'v_x_ped_' + str(i) + ','
-            header += 'v_y_ped_' + str(i) + ','
-            header += 'x_ped_' + str(i) + ','
-            header += 'y_ped_' + str(i) + ','
-
-        for i in range(0,args.num_peds):
-            header += 'a_x_'  + str(i) + ','
-            header += 'a_y_' + str(i) + ','
-            header += 'noise_x_' + str(i) + ','
-            header += 'noise_y_' + str(i) + ','
-
-        header += 'reward'
-        save_trials(args.iters, args.log_dir, header, sess, save_every_n=args.snapshot_gap)
-        saver.save(sess, args.exp_name)
-
-run_experiment_lite(
-    run_task,
-    n_parallel = 4
+parallel_sampler.initialize(n_parallel=4)
+singleton_pool.initialize(n_parallel=4)
+algo = TRPO(
+    env=env,
+    policy=policy,
+    baseline=LinearFeatureBaseline(env_spec=env.spec),
+    batch_size=args.batch_size,
+    step_size=args.step_size,
+    n_itr=args.iters,
+    store_paths=args.store_paths
 )
+saver = tf.train.Saver()
+with tf.Session() as sess:
+    algo.train(sess=sess)
+
+    header = 'trial, step, ' + 'v_x_car, v_y_car, x_car, y_car, '
+    for i in range(0,args.num_peds):
+        header += 'v_x_ped_' + str(i) + ','
+        header += 'v_y_ped_' + str(i) + ','
+        header += 'x_ped_' + str(i) + ','
+        header += 'y_ped_' + str(i) + ','
+
+    for i in range(0,args.num_peds):
+        header += 'a_x_'  + str(i) + ','
+        header += 'a_y_' + str(i) + ','
+        header += 'noise_x_' + str(i) + ','
+        header += 'noise_y_' + str(i) + ','
+
+    header += 'reward'
+    save_trials(args.iters, args.log_dir, header, sess, save_every_n=args.snapshot_gap)
+    saver.save(sess, args.exp_name)
 
 
