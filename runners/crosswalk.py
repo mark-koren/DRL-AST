@@ -126,7 +126,7 @@ policy = GaussianMLPPolicy(name='mlp_policy',
                            hidden_sizes=(512, 256, 128, 64, 32))
 baseline = LinearFeatureBaseline(env_spec=env.spec)
 
-parallel_sampler.initialize(n_parallel=8)
+#parallel_sampler.initialize(n_parallel=20)
 algo = TRPO(
     env=env,
     policy=policy,
