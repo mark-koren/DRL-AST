@@ -1,5 +1,6 @@
 from sandbox.rocky.tf.algos.trpo import TRPO
 from sandbox.rocky.tf.policies.gaussian_mlp_policy import GaussianMLPPolicy
+from sandbox.rocky.tf.policies.deterministic_mlp_policy import DeterministicMLPPolicy
 from sandbox.rocky.tf.envs.base import TfEnv
 
 from rllab.baselines.linear_feature_baseline import LinearFeatureBaseline
@@ -37,9 +38,9 @@ parser.add_argument('--args_data', type=str, default=None)
 #Environement Params
 
 parser.add_argument('--dt', type=float, default=0.1)
-parser.add_argument('--num_peds', type=int, default=10)
-parser.add_argument('--alpha', type=float, default=0.8)
-parser.add_argument('--beta', type=float, default=0.8)
+parser.add_argument('--num_peds', type=int, default=100)
+parser.add_argument('--alpha', type=float, default=0.85)
+parser.add_argument('--beta', type=float, default=0.005)
 parser.add_argument('--v_des', type=float, default=11.17)
 parser.add_argument('--delta', type=float, default=4.0)
 parser.add_argument('--t_headway', type=float, default=1.5)
@@ -124,10 +125,13 @@ env = TfEnv(normalize(CrosswalkSensorEnv(ego=None,
 policy = GaussianMLPPolicy(name='mlp_policy',
                            env_spec=env.spec,
                            hidden_sizes=(512, 256, 128, 64, 32))
+# policy = DeterministicMLPPolicy(name='mlp_policy',
+#                                 env_spec=env.spec,
+#                                 hidden_sizes=(512, 256, 128, 64, 32))
 baseline = LinearFeatureBaseline(env_spec=env.spec)
 
-parallel_sampler.initialize(n_parallel=4)
-singleton_pool.initialize(n_parallel=4)
+# parallel_sampler.initialize(n_parallel=4)
+# singleton_pool.initialize(n_parallel=4)
 algo = TRPO(
     env=env,
     policy=policy,
@@ -135,7 +139,7 @@ algo = TRPO(
     batch_size=args.batch_size,
     step_size=args.step_size,
     n_itr=args.iters,
-    store_paths=args.store_paths
+    store_paths=True
 )
 saver = tf.train.Saver()
 with tf.Session() as sess:
@@ -151,6 +155,8 @@ with tf.Session() as sess:
     for i in range(0,args.num_peds):
         header += 'a_x_'  + str(i) + ','
         header += 'a_y_' + str(i) + ','
+        header += 'noise_v_x_' + str(i) + ','
+        header += 'noise_v_y_' + str(i) + ','
         header += 'noise_x_' + str(i) + ','
         header += 'noise_y_' + str(i) + ','
 

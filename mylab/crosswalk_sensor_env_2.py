@@ -94,7 +94,7 @@ class CrosswalkSensorEnv(Env):
         #Use Alpha-Beta tracker to update car observation
         self._car_obs = self.tracker(self._car_obs, self._measurements)
         #Decide the accel for next step
-        self.update_car(self._car_obs, self._car[0])
+        self._car_accel[0] = self.update_car(self._car_obs, self._car[0])
         #Give the obs for the ped for next step
         self.observe()
         #Update instance attributes
@@ -106,7 +106,6 @@ class CrosswalkSensorEnv(Env):
                     info={'cache':self._info})
 
     def mahalanobis_d(self, action):
-        #TODO get mean and covariance from G
         #load G
         #bundle = G(self._state)
         #mean = G[0:2].T
@@ -129,8 +128,8 @@ class CrosswalkSensorEnv(Env):
         dif = np.copy(action)
         dif[::2] -= mean[0,0]
         dif[1::2] -= mean[1, 0]
-        dist = np.dot(np.dot(dif.T, big_cov), dif)
-
+        dist = np.dot(np.dot(dif.T, np.linalg.inv(big_cov)), dif)
+        # print(dist)
         return np.sqrt(dist)
 
 
@@ -156,15 +155,16 @@ class CrosswalkSensorEnv(Env):
 
         self._car = np.array([self.c_v_des, 0.0, self.c_car_init_x, self.c_car_init_y])
         self._car_accel = np.zeros((2))
-        # self._peds[:,0:4] = np.array([0.0, 1.0, 0.5,-2.0])
+        self._peds[:,0:4] = np.array([0.0, 1.0, -0.5,-2.0])
+        # self._peds[1, 0:4] = np.array([0.0, 1.0, 0.5, -2.0])
         # self._peds[0, 0:4] = np.array([0.0, 1.0, -0.5, -2.0])
         # self._peds[1, 0:4] = np.array([0.0, 1.0, 0.5, -4.0])
         # self._peds[2, 0:4] = np.array([0.0, 1.0, -0.5, -4.0])
-        self._peds[:, 0] = 0.0
+        # self._peds[:, 0] = 0.0
         self._peds[:, 1] = self.directions
         self._peds[:,2] = self.x
         self._peds[:, 3] = self.y
-        dist = self._peds[:, 2:4] - self._car[2:4]
+        # dist = self._peds[:, 2:4] - self._car[2:4]
 
         self._measurements = self._peds - self._car
         self._env_obs = self._measurements
@@ -208,10 +208,14 @@ class CrosswalkSensorEnv(Env):
 
     def sensors(self, car, peds, noise):
 
-        measurements = peds - car + noise
+        measurements = peds + noise
         # if np.any(np.isnan(measurements)):
         #     pdb.set_trace()
-
+        # print('peds: ', peds)
+        # print('car: ', car)
+        # print('noise: ', noise)
+        # print('Measurements: ', measurements)
+        # pdb.set_trace()
         return measurements
 
     def tracker(self, observation_old, measurements):
@@ -224,8 +228,8 @@ class CrosswalkSensorEnv(Env):
         # print('Expected(k): ', observation)
         residuals = measurements[:, 2:4] - observation[:, 2:4]
 
-        observation[:,0:2] += self.c_alpha * residuals
-        observation[:, 2:4] += self.c_beta / self.c_dt * residuals
+        observation[:,2:4] += self.c_alpha * residuals
+        observation[:, 0:2] += self.c_beta / self.c_dt * residuals
         # print('Residuals: ', residuals)
         # print('Observation: ', observation)
         # pdb.set_trace()
@@ -235,22 +239,34 @@ class CrosswalkSensorEnv(Env):
 
     def update_car(self, obs, v_car):
 
-        mins = np.argmin(obs, axis=0)
+        cond = np.repeat(np.resize(np.logical_and(obs[:, 3] > -1.5, obs[:,3] < 4.5),(self.c_num_peds,1)),4, axis=1)
+        in_road = np.expand_dims(np.extract(cond, obs), axis = 0)
 
-        v_oth = obs[mins[3], 0]
-        s_headway = obs[mins[3], 2]
 
-        del_v = v_oth - v_car
-        s_des = self.c_s_min + v_car * self.c_t_headway - v_car * del_v / (2 * np.sqrt(self.c_a_max * self.c_d_cmf))
-        if self.c_v_des > 0.0:
-            v_ratio = v_car / self.c_v_des
+
+        if in_road.size != 0:
+            mins = np.argmin(in_road.reshape((-1,4)), axis = 0)
+            v_oth = obs[mins[3], 0]
+            s_headway = obs[mins[3], 2] - self._car[2]
+
+            del_v = v_oth - v_car
+            s_des = self.c_s_min + v_car * self.c_t_headway - v_car * del_v / (2 * np.sqrt(self.c_a_max * self.c_d_cmf))
+            if self.c_v_des > 0.0:
+                v_ratio = v_car / self.c_v_des
+            else:
+                v_ratio = 1.0
+
+            a = self.c_a_max * (1.0 - v_ratio**self.c_delta - (s_des/s_headway)**2)
+
         else:
-            v_ratio = 1.0
+            del_v = self.c_v_des - v_car
+            a = del_v
 
-        a = self.c_a_max * (1.0 - v_ratio**self.c_delta - (s_des/s_headway)**2)
         if np.isnan(a):
             pdb.set_trace()
 
+        # print('accel: ', a)
+        # pdb.set_trace()
         return np.clip(a, -self.c_d_max, self.c_a_max)
 
     def move_car(self, car, accel):
@@ -281,14 +297,14 @@ class CrosswalkSensorEnv(Env):
         # pdb.set_trace()
         if(np.any(np.all(np.less_equal(abs(dist), self.c_min_dist), axis=1))):
             self._reward = 0
-        elif(np.all(dist[:,0]) < -3.0 or self._step > 50):
+        elif(np.all(np.less_equal(dist[:,0], -3.0)) or self._step > 50):
             self._reward = -10000 - 1000 * np.min(np.linalg.norm(dist, axis=1))
         else:
             self._done = False
             self._reward = -np.log(1 + self.mahalanobis_d(self._action))
 
-        if np.any(dist < -10.0) or self._step > 100:
-            self._done = True
+        # if np.any(dist) < -10.0 or self._step > 100:
+        #     self._done = True
 
     def observe(self):
         self._env_obs = self._peds - self._car
