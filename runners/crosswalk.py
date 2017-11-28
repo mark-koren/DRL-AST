@@ -2,6 +2,8 @@ from sandbox.rocky.tf.algos.trpo import TRPO
 from sandbox.rocky.tf.policies.gaussian_mlp_policy import GaussianMLPPolicy
 from sandbox.rocky.tf.policies.deterministic_mlp_policy import DeterministicMLPPolicy
 from sandbox.rocky.tf.envs.base import TfEnv
+from sandbox.rocky.tf.policies.gaussian_lstm_policy import GaussianLSTMPolicy
+from sandbox.rocky.tf.optimizers.conjugate_gradient_optimizer import ConjugateGradientOptimizer, FiniteDifferenceHvp
 
 from rllab.baselines.linear_feature_baseline import LinearFeatureBaseline
 from rllab.baselines.zero_baseline import ZeroBaseline
@@ -23,8 +25,9 @@ parser = argparse.ArgumentParser()
 #Algo Params
 parser.add_argument('--iters', type=int, default=101)
 parser.add_argument('--batch_size', type=int, default=4000)
-parser.add_argument('--step_size', type=float, default=0.1)
+parser.add_argument('--step_size', type=float, default=1.0)
 parser.add_argument('--store_paths', type=bool, default=True)
+parser.add_argument('--action_only', type=bool, default=False)
 # Logger Params
 parser.add_argument('--exp_name', type=str, default='crosswalk_exp')
 parser.add_argument('--tabular_log_file', type=str, default='tab.txt')
@@ -38,7 +41,7 @@ parser.add_argument('--args_data', type=str, default=None)
 #Environement Params
 
 parser.add_argument('--dt', type=float, default=0.1)
-parser.add_argument('--num_peds', type=int, default=100)
+parser.add_argument('--num_peds', type=int, default=2)
 parser.add_argument('--alpha', type=float, default=0.85)
 parser.add_argument('--beta', type=float, default=0.005)
 parser.add_argument('--v_des', type=float, default=11.17)
@@ -121,10 +124,15 @@ env = TfEnv(normalize(CrosswalkSensorEnv(ego=None,
                                    car_init_x=args.car_init_x,
                                    car_init_y=args.car_init_y,
                                    mean_sensor_noise = 0.0,
-                                   cov_sensor_noise = 0.1)))
-policy = GaussianMLPPolicy(name='mlp_policy',
+                                   cov_sensor_noise = 0.1,
+                                   action_only = args.action_only)))
+policy = GaussianLSTMPolicy(name='mlp_policy',
                            env_spec=env.spec,
-                           hidden_sizes=(512, 256, 128, 64, 32))
+                            hidden_dim=128)
+                           # hidden_sizes=(512, 256, 128, 64, 32))
+# policy = GaussianMLPPolicy(name='mlp_policy',
+#                            env_spec=env.spec,
+#                            hidden_sizes=(512, 256, 128, 64, 32))
 # policy = DeterministicMLPPolicy(name='mlp_policy',
 #                                 env_spec=env.spec,
 #                                 hidden_sizes=(512, 256, 128, 64, 32))
@@ -139,7 +147,8 @@ algo = TRPO(
     batch_size=args.batch_size,
     step_size=args.step_size,
     n_itr=args.iters,
-    store_paths=True
+    store_paths=True,
+    optimizer=ConjugateGradientOptimizer(hvp_approach=FiniteDifferenceHvp(base_eps=1e-5))
 )
 saver = tf.train.Saver()
 with tf.Session() as sess:

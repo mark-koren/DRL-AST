@@ -13,7 +13,8 @@ class CrosswalkSensorEnv(Env):
                  x_v_low, y_v_low, x_v_high, y_v_high,
                  mean_x, mean_y, cov_x, cov_y,
                 car_init_x, car_init_y,
-                 mean_sensor_noise, cov_sensor_noise):
+                 mean_sensor_noise, cov_sensor_noise,
+                 action_only):
         #Constant hyper-params -- set by user
         self.c_num_peds = num_peds
         self.c_dt = dt
@@ -47,6 +48,7 @@ class CrosswalkSensorEnv(Env):
         self.c_car_init_y = car_init_y
         self.c_mean_sensor_noise = mean_sensor_noise
         self.c_cov_sensor_noise = cov_sensor_noise
+        self.action_only = action_only
 
         #These are set by reset, not the user
         self._car = np.zeros((4))
@@ -60,6 +62,7 @@ class CrosswalkSensorEnv(Env):
         self._info = []
         self._step = 0
         self._action = None
+        self._first_step = True
         self.directions = np.random.randint(2, size=self.c_num_peds) * 2 - 1
         self.y = np.random.rand(self.c_num_peds) * 14 - 5
         self.x = np.random.rand(self.c_num_peds) * 4 - 2
@@ -100,7 +103,12 @@ class CrosswalkSensorEnv(Env):
         #Update instance attributes
         self.log()
 
-        return Step(observation=np.ndarray.flatten(self._env_obs),
+        if self.action_only:
+            obs = np.ndarray.flatten(np.array([]))
+        else:
+            obs  = np.ndarray.flatten(self._env_obs)
+
+        return Step(observation=obs,
                     reward=self._reward,
                     done=self._done,
                     info={'cache':self._info})
@@ -155,6 +163,44 @@ class CrosswalkSensorEnv(Env):
 
         self._car = np.array([self.c_v_des, 0.0, self.c_car_init_x, self.c_car_init_y])
         self._car_accel = np.zeros((2))
+        self._peds[:,0:4] = np.array([0.0, 1.0, 0.0,-2.0])
+        # self._peds[1, 0:4] = np.array([0.0, 1.0, 0.5, -2.0])
+        self._peds[1, 0:4] = np.array([0.0, -1.0, 0.0, 5.0])
+        # self._peds[1, 0:4] = np.array([0.0, 1.0, 0.5, -4.0])
+        # self._peds[2, 0:4] = np.array([0.0, 1.0, -0.5, -4.0])
+        # self._peds[:, 0] = 0.0
+        self._peds[:, 1] = self.directions
+        self._peds[:,2] = self.x
+        self._peds[:, 3] = self.y
+        # dist = self._peds[:, 2:4] - self._car[2:4]
+
+        self._measurements = self._peds - self._car
+        self._env_obs = self._measurements
+        self._car_obs = self._measurements
+        self._first_step = True
+        if self.action_only:
+            return np.ndarray.flatten(np.array([]))
+        else:
+            return np.ndarray.flatten(self._measurements)
+        # return np.ndarray.flatten(np.zeros_like(self._measurements))
+
+    def null_set(self):
+        """
+        Resets the state of the environment, returning an initial observation.
+        Outputs
+        -------
+        observation : the initial observation of the space. (Initial reward is assumed to be 0.)
+        """
+
+        # self._car = np.zeros((4))
+        # self._car_accel = np.zeros((2))
+        # self._peds = np.zeros((self._num_peds, 4))
+        # self._measurements = np.zeros()
+        # self._car_obs = np.zeros()
+        # self._env_obs = np.zeros()
+        # self._done = False
+        # self._reward = 0.0
+        # self._info = []
         self._peds[:,0:4] = np.array([0.0, 1.0, -0.5,-2.0])
         # self._peds[1, 0:4] = np.array([0.0, 1.0, 0.5, -2.0])
         # self._peds[0, 0:4] = np.array([0.0, 1.0, -0.5, -2.0])
@@ -169,6 +215,7 @@ class CrosswalkSensorEnv(Env):
         self._measurements = self._peds - self._car
         self._env_obs = self._measurements
         self._car_obs = self._measurements
+        self._first_step = False
         return np.ndarray.flatten(self._measurements)
 
     @property
@@ -197,6 +244,10 @@ class CrosswalkSensorEnv(Env):
         for i in range(1, self.c_num_peds):
             low = np.hstack((low, np.array([self.c_x_v_low, self.c_y_v_low, self.c_x_boundary_low, self.c_y_boundary_low])))
             high = np.hstack((high, np.array([self.c_x_v_high, self.c_y_v_high, self.c_x_boundary_high, self.c_y_boundary_high])))
+
+        if self.action_only:
+            low = np.array([])
+            high = np.array([])
 
         return Box(low=low, high=high)
 
