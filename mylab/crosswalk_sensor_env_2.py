@@ -66,6 +66,8 @@ class CrosswalkSensorEnv(Env):
         self.directions = np.random.randint(2, size=self.c_num_peds) * 2 - 1
         self.y = np.random.rand(self.c_num_peds) * 14 - 5
         self.x = np.random.rand(self.c_num_peds) * 4 - 2
+        self.x_start_bounds = [-1.0, 1.0]
+        self.y_start_bounds = [-6.0, -1.0]
 
         super().__init__()
 
@@ -104,7 +106,7 @@ class CrosswalkSensorEnv(Env):
         self.log()
 
         if self.action_only:
-            obs = np.ndarray.flatten(np.array([]))
+            obs = np.ndarray.flatten(np.array([self.x, self.y]))
         else:
             obs  = np.ndarray.flatten(self._env_obs)
 
@@ -163,8 +165,8 @@ class CrosswalkSensorEnv(Env):
 
         self._car = np.array([self.c_v_des, 0.0, self.c_car_init_x, self.c_car_init_y])
         self._car_accel = np.zeros((2))
-        x = np.random.uniform(-1.0, 1.0)
-        y = np.random.uniform(-6.0, -1.0)
+        self.x = np.random.uniform(self.x_start_bounds[0], self.x_start_bounds[1])
+        self.y = np.random.uniform(self.y_start_bounds[0], self.y_start_bounds[1])
         self._peds[:,0:4] = np.array([0.0, 1.0, x,y])
         # self._peds[1, 0:4] = np.array([0.0, 1.0, 0.5, -2.0])
         # self._peds[1, 0:4] = np.array([0.0, -1.0, 0.0, 5.0])
@@ -181,7 +183,7 @@ class CrosswalkSensorEnv(Env):
         self._car_obs = self._measurements
         self._first_step = True
         if self.action_only:
-            return np.ndarray.flatten(np.array([]))
+            return np.ndarray.flatten(np.array([x, y]))
         else:
             return np.ndarray.flatten(self._measurements)
         # return np.ndarray.flatten(np.zeros_like(self._measurements))
@@ -248,8 +250,8 @@ class CrosswalkSensorEnv(Env):
             high = np.hstack((high, np.array([self.c_x_v_high, self.c_y_v_high, self.c_x_boundary_high, self.c_y_boundary_high])))
 
         if self.action_only:
-            low = np.array([])
-            high = np.array([])
+            low = np.array([self.x_start_bounds[0], self.y_start_bounds[0]])
+            high = np.array([self.x_start_bounds[1], self.y_start_bounds[1]])
 
         return Box(low=low, high=high)
 

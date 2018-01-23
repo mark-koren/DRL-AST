@@ -27,7 +27,7 @@ parser.add_argument('--iters', type=int, default=101)
 parser.add_argument('--batch_size', type=int, default=4000)
 parser.add_argument('--step_size', type=float, default=1.0)
 parser.add_argument('--store_paths', type=bool, default=True)
-parser.add_argument('--action_only', type=bool, default=False)
+parser.add_argument('--action_only', type=bool, default=True)
 # Logger Params
 parser.add_argument('--exp_name', type=str, default='crosswalk_exp')
 parser.add_argument('--tabular_log_file', type=str, default='tab.txt')
