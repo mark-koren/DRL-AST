@@ -163,15 +163,17 @@ class CrosswalkSensorEnv(Env):
 
         self._car = np.array([self.c_v_des, 0.0, self.c_car_init_x, self.c_car_init_y])
         self._car_accel = np.zeros((2))
-        self._peds[:,0:4] = np.array([0.0, 1.0, 0.0,-2.0])
+        x = np.random.uniform(-1.0, 1.0)
+        y = np.random.uniform(-6.0, -1.0)
+        self._peds[:,0:4] = np.array([0.0, 1.0, x,y])
         # self._peds[1, 0:4] = np.array([0.0, 1.0, 0.5, -2.0])
-        self._peds[1, 0:4] = np.array([0.0, -1.0, 0.0, 5.0])
+        # self._peds[1, 0:4] = np.array([0.0, -1.0, 0.0, 5.0])
         # self._peds[1, 0:4] = np.array([0.0, 1.0, 0.5, -4.0])
         # self._peds[2, 0:4] = np.array([0.0, 1.0, -0.5, -4.0])
         # self._peds[:, 0] = 0.0
-        self._peds[:, 1] = self.directions
-        self._peds[:,2] = self.x
-        self._peds[:, 3] = self.y
+        # self._peds[:, 1] = self.directions
+        # self._peds[:,2] = self.x
+        # self._peds[:, 3] = self.y
         # dist = self._peds[:, 2:4] - self._car[2:4]
 
         self._measurements = self._peds - self._car
