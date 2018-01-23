@@ -167,7 +167,7 @@ class CrosswalkSensorEnv(Env):
         self._car_accel = np.zeros((2))
         self.x = np.random.uniform(self.x_start_bounds[0], self.x_start_bounds[1])
         self.y = np.random.uniform(self.y_start_bounds[0], self.y_start_bounds[1])
-        self._peds[:,0:4] = np.array([0.0, 1.0, x,y])
+        self._peds[:,0:4] = np.array([0.0, 1.0, self.x,self.y])
         # self._peds[1, 0:4] = np.array([0.0, 1.0, 0.5, -2.0])
         # self._peds[1, 0:4] = np.array([0.0, -1.0, 0.0, 5.0])
         # self._peds[1, 0:4] = np.array([0.0, 1.0, 0.5, -4.0])
@@ -183,7 +183,7 @@ class CrosswalkSensorEnv(Env):
         self._car_obs = self._measurements
         self._first_step = True
         if self.action_only:
-            return np.ndarray.flatten(np.array([x, y]))
+            return np.ndarray.flatten(np.array([self.x, self.y]))
         else:
             return np.ndarray.flatten(self._measurements)
         # return np.ndarray.flatten(np.zeros_like(self._measurements))
