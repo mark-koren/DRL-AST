@@ -150,7 +150,7 @@ algo = TRPO(
     store_paths=True,
     optimizer=ConjugateGradientOptimizer(hvp_approach=FiniteDifferenceHvp(base_eps=1e-5))
 )
-saver = tf.train.Saver()
+saver = tf.train.Saver(save_relative_paths=True)
 with tf.Session() as sess:
     algo.train(sess=sess)
 
@@ -171,6 +171,6 @@ with tf.Session() as sess:
 
     header += 'reward'
     save_trials(args.iters, args.log_dir, header, sess, save_every_n=args.snapshot_gap)
-    saver.save(sess, args.exp_name)
+    saver.save(sess, args.log_dir + '/' + args.exp_name)
 
 
