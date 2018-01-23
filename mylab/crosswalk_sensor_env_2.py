@@ -66,8 +66,9 @@ class CrosswalkSensorEnv(Env):
         self.directions = np.random.randint(2, size=self.c_num_peds) * 2 - 1
         self.y = np.random.rand(self.c_num_peds) * 14 - 5
         self.x = np.random.rand(self.c_num_peds) * 4 - 2
-        self.x_start_bounds = [-1.0, 1.0]
-        self.y_start_bounds = [-6.0, -1.0]
+        self.low_start_bounds = [-1.0, -6.0, -1.0, 5.0]
+        self.high_start_bounds = [1.0, -2.0, 1.0, 9.0]
+        self.v_start = [1.0, -1.0]
 
         super().__init__()
 
@@ -165,9 +166,11 @@ class CrosswalkSensorEnv(Env):
 
         self._car = np.array([self.c_v_des, 0.0, self.c_car_init_x, self.c_car_init_y])
         self._car_accel = np.zeros((2))
-        self.x = np.random.uniform(self.x_start_bounds[0], self.x_start_bounds[1])
-        self.y = np.random.uniform(self.y_start_bounds[0], self.y_start_bounds[1])
-        self._peds[:,0:4] = np.array([0.0, 1.0, self.x,self.y])
+        pos = np.random.uniform(self.low_start_bounds, self.high_start_bounds)
+        self.x = np.array([pos[0], pos[2]])
+        self.y = np.array([pos[1], pos[3]])
+        self._peds[0,0:4] = np.array([0.0, self.v_start[0], self.x[0],self.y[0]])
+        self._peds[1, 0:4] = np.array([0.0, self.v_start[1], self.x[1], self.y[1]])
         # self._peds[1, 0:4] = np.array([0.0, 1.0, 0.5, -2.0])
         # self._peds[1, 0:4] = np.array([0.0, -1.0, 0.0, 5.0])
         # self._peds[1, 0:4] = np.array([0.0, 1.0, 0.5, -4.0])
@@ -250,8 +253,8 @@ class CrosswalkSensorEnv(Env):
             high = np.hstack((high, np.array([self.c_x_v_high, self.c_y_v_high, self.c_x_boundary_high, self.c_y_boundary_high])))
 
         if self.action_only:
-            low = np.array([self.x_start_bounds[0], self.y_start_bounds[0]])
-            high = np.array([self.x_start_bounds[1], self.y_start_bounds[1]])
+            low = np.array(self.low_start_bounds)
+            high = np.array(self.high_start_bounds)
 
         return Box(low=low, high=high)
 
