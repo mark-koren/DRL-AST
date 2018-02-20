@@ -13,7 +13,7 @@ def save_trials(iters, path, header, sess, save_every_n = 100):
             continue
         with tf.variable_scope('Loader' + str(i)):
             data = joblib.load(path + '/itr_' + str(i) + '.pkl')
-            # pdb.set_trace()
+            pdb.set_trace()
             paths = data['paths']
 
             trials = np.array([]).reshape(0, paths[0]['env_infos']['info']['cache'].shape[1])
