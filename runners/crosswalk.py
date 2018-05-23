@@ -128,9 +128,9 @@ env = TfEnv(normalize(CrosswalkSensorEnv(ego=None,
                                    mean_sensor_noise = 0.0,
                                    cov_sensor_noise = 0.1,
                                    action_only = args.action_only)))
-policy = GaussianLSTMPolicy(name='mlp_policy',
+policy = GaussianLSTMPolicy(name='lstm_policy',
                            env_spec=env.spec,
-                            hidden_dim=128)
+                            hidden_dim=256)
                            # hidden_sizes=(512, 256, 128, 64, 32))
 # policy = GaussianMLPPolicy(name='mlp_policy',
 #                            env_spec=env.spec,
@@ -148,7 +148,7 @@ else:
 algo = TRPO(
     env=env,
     policy=policy,
-    baseline=LinearFeatureBaseline(env_spec=env.spec),
+    baseline=baseline,
     batch_size=args.batch_size,
     step_size=args.step_size,
     n_itr=args.iters,
