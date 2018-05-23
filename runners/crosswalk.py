@@ -4,7 +4,7 @@ from sandbox.rocky.tf.policies.deterministic_mlp_policy import DeterministicMLPP
 from sandbox.rocky.tf.envs.base import TfEnv
 from sandbox.rocky.tf.policies.gaussian_lstm_policy import GaussianLSTMPolicy
 from sandbox.rocky.tf.optimizers.conjugate_gradient_optimizer import ConjugateGradientOptimizer, FiniteDifferenceHvp
-
+from rllab.baselines.gaussian_mlp_baseline import GaussianMLPBaseline
 from rllab.baselines.linear_feature_baseline import LinearFeatureBaseline
 from rllab.baselines.zero_baseline import ZeroBaseline
 from rllab.envs.normalized_env import normalize
@@ -28,6 +28,8 @@ parser.add_argument('--batch_size', type=int, default=4000)
 parser.add_argument('--step_size', type=float, default=1.0)
 parser.add_argument('--store_paths', type=bool, default=True)
 parser.add_argument('--action_only', type=bool, default=True)
+parser.add_argument('--mlp_baseline', type=bool, default=False)
+
 # Logger Params
 parser.add_argument('--exp_name', type=str, default='crosswalk_exp')
 parser.add_argument('--tabular_log_file', type=str, default='tab.txt')
@@ -136,7 +138,10 @@ policy = GaussianLSTMPolicy(name='mlp_policy',
 # policy = DeterministicMLPPolicy(name='mlp_policy',
 #                                 env_spec=env.spec,
 #                                 hidden_sizes=(512, 256, 128, 64, 32))
-baseline = LinearFeatureBaseline(env_spec=env.spec)
+if args.mlp_baseline:
+    baseline = GaussianMLPBaseline(env_spec=env.spec)
+else:
+    baseline = LinearFeatureBaseline(env_spec=env.spec)
 
 # parallel_sampler.initialize(n_parallel=4)
 # singleton_pool.initialize(n_parallel=4)

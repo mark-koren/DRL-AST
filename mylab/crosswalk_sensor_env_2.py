@@ -6,15 +6,42 @@ import numpy as np
 import pdb
 
 class CrosswalkSensorEnv(Env):
-    def __init__(self, ego, num_peds, dt, alpha, beta, v_des, delta, t_headway,
-                 a_max, s_min, d_cmf, d_max, min_dist_x, min_dist_y,
-                 x_accel_low, y_accel_low, x_accel_high,y_accel_high,
-                 x_boundary_low, y_boundary_low, x_boundary_high, y_boundary_high,
-                 x_v_low, y_v_low, x_v_high, y_v_high,
-                 mean_x, mean_y, cov_x, cov_y,
-                car_init_x, car_init_y,
-                 mean_sensor_noise, cov_sensor_noise,
-                 action_only):
+    def __init__(self,
+                 ego = None,
+                 num_peds = 1,
+                 dt = 0.1,
+                 alpha = 0.85,
+                 beta = 0.005,
+                 v_des = 11.17,
+                 delta = 4.0,
+                 t_headway = 1.5,
+                 a_max = 3.0,
+                 s_min = 4.0,
+                 d_cmf = 2.0,
+                 d_max = 9.0,
+                 min_dist_x = 2.5,
+                 min_dist_y = 1.4,
+                 x_accel_low = -1.0,
+                 y_accel_low = -1.0,
+                 x_accel_high = 1.0,
+                 y_accel_high = 1.0,
+                 x_boundary_low = -10.0,
+                 y_boundary_low = -10.0,
+                 x_boundary_high = 10.0,
+                 y_boundary_high = 10.0,
+                 x_v_low = -10.0,
+                 y_v_low = -10.0,
+                 x_v_high = 10.0,
+                 y_v_high = 10.0,
+                 mean_x = 0.0,
+                 mean_y = 0.0,
+                 cov_x = 0.1,
+                 cov_y = 0.01,
+                 car_init_x = 35.0,
+                 car_init_y = 0.0,
+                 mean_sensor_noise = 0.0,
+                 cov_sensor_noise = 0.1,
+                 action_only = True):
         #Constant hyper-params -- set by user
         self.c_num_peds = num_peds
         self.c_dt = dt
@@ -107,11 +134,13 @@ class CrosswalkSensorEnv(Env):
         self.log()
 
         if self.action_only:
-            obs = np.ndarray.flatten(np.array([self.x, self.y]))
+            obs = np.ndarray.flatten(np.array([
+                self.x[0:self.c_num_peds],
+                self.y[0:self.c_num_peds]]))
         else:
             obs  = np.ndarray.flatten(self._env_obs)
 
-        return Step(observation=obs,
+        return Step(observation=self.init_conditions,
                     reward=self._reward,
                     done=self._done,
                     info={'cache':self._info})
@@ -163,18 +192,28 @@ class CrosswalkSensorEnv(Env):
         # self._info = []
         self._info = []
         self._step = 0
-
-        self._car = np.array([self.c_v_des, 0.0, self.c_car_init_x, self.c_car_init_y])
+        self.init_conditions = self.observation_space.sample()
+        # v_des = np.random.uniform(self.c_v_des*0.75, self.c_v_des*1.25)
+        v_des = self.init_conditions[3*self.c_num_peds]
+        # car_init_x = np.random.uniform(self.c_car_init_x*0.75, self.c_car_init_x*1.25)
+        car_init_x = self.init_conditions[3*self.c_num_peds + 1]
+        self._car = np.array([v_des, 0.0, car_init_x, self.c_car_init_y])
         self._car_accel = np.zeros((2))
-        pos = np.random.uniform(self.low_start_bounds, self.high_start_bounds)
-        self.x = np.array([pos[0], pos[2], pos[4], pos[6]])
-        self.y = np.array([pos[1], pos[3], pos[5], pos[7]])
+        # pos = np.random.uniform(self.low_start_bounds, self.high_start_bounds)
+        pos = self.init_conditions[0:2*self.c_num_peds]
+        self.x = pos[0:self.c_num_peds*2:2]
+        self.y = pos[1:self.c_num_peds*2:2]
         # for i in range(self.c_num_peds):
         #     self._peds[i,0:4] = np.array([0.0, self.v_start[i], self.x[i],self.y[i]])
-        self._peds[:, 0] = np.zeros((4))
-        self._peds[:, 1] = self.v_start[:]
-        self._peds[:, 2] = self.x[:]
-        self._peds[:, 3] = self.y[:]
+        # pdb.set_trace()
+        # v_start = np.random.uniform(
+        #     np.array(self.v_start[0:self.c_num_peds])*0.0,
+        #     np.array(self.v_start[0:self.c_num_peds])*2.0)
+        v_start = self.init_conditions[2*self.c_num_peds:3*self.c_num_peds]
+        self._peds[0:self.c_num_peds, 0] = np.zeros((self.c_num_peds))
+        self._peds[0:self.c_num_peds, 1] = v_start
+        self._peds[0:self.c_num_peds, 2] = self.x
+        self._peds[0:self.c_num_peds, 3] = self.y
         # self._peds[1, 0:4] = np.array([0.0, 1.0, 0.5, -2.0])
         # self._peds[1, 0:4] = np.array([0.0, -1.0, 0.0, 5.0])
         # self._peds[1, 0:4] = np.array([0.0, 1.0, 0.5, -4.0])
@@ -190,7 +229,9 @@ class CrosswalkSensorEnv(Env):
         self._car_obs = self._measurements
         self._first_step = True
         if self.action_only:
-            return np.ndarray.flatten(np.array([self.x, self.y]))
+            # self.init_conditions = np.ndarray.flatten(np.array([self.x, self.y, v_start, v_des, car_init_x]))
+            # pdb.set_trace()
+            return self.init_conditions
         else:
             return np.ndarray.flatten(self._measurements)
         # return np.ndarray.flatten(np.zeros_like(self._measurements))
@@ -257,10 +298,17 @@ class CrosswalkSensorEnv(Env):
             high = np.hstack((high, np.array([self.c_x_v_high, self.c_y_v_high, self.c_x_boundary_high, self.c_y_boundary_high])))
 
         if self.action_only:
-            low = np.array(self.low_start_bounds)
-            high = np.array(self.high_start_bounds)
+            low = self.low_start_bounds[:self.c_num_peds*2]
+            low = low + np.ndarray.tolist(0.0*np.array(self.v_start))[:self.c_num_peds]
+            low = low + [0.75*self.c_v_des]
+            low = low + [0.75*self.c_car_init_x]
+            high = self.high_start_bounds[:self.c_num_peds * 2]
+            high = high + np.ndarray.tolist(2.0 * np.array(self.v_start))[:self.c_num_peds]
+            high = high + [1.25 * self.c_v_des]
+            high = high + [1.25 * self.c_car_init_x]
 
-        return Box(low=low, high=high)
+        # pdb.set_trace()
+        return Box(low=np.array(low), high=np.array(high))
 
     def render(self):
         print(':(')
