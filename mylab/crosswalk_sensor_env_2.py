@@ -193,8 +193,8 @@ class CrosswalkSensorEnv(Env):
         self._info = []
         self._step = 0
         self.init_conditions = self.observation_space.sample()
-        self.init_conditions[0] = 0.0
-        self.init_conditions[1] = -4.0
+        # self.init_conditions[0] = 0.0
+        # self.init_conditions[1] = -4.0
         # v_des = np.random.uniform(self.c_v_des*0.75, self.c_v_des*1.25)
         v_des = self.init_conditions[3*self.c_num_peds]
         # car_init_x = np.random.uniform(self.c_car_init_x*0.75, self.c_car_init_x*1.25)
