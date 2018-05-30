@@ -3,6 +3,8 @@ from sandbox.rocky.tf.policies.gaussian_mlp_policy import GaussianMLPPolicy
 from sandbox.rocky.tf.policies.deterministic_mlp_policy import DeterministicMLPPolicy
 from sandbox.rocky.tf.envs.base import TfEnv
 from sandbox.rocky.tf.policies.gaussian_lstm_policy import GaussianLSTMPolicy
+from sandbox.rocky.tf.policies.gaussian_gru_policy import GaussianGRUPolicy
+from sandbox.rocky.tf.optimizers.penalty_lbfgs_optimizer import PenaltyLbfgsOptimizer
 from sandbox.rocky.tf.optimizers.conjugate_gradient_optimizer import ConjugateGradientOptimizer, FiniteDifferenceHvp
 from rllab.baselines.gaussian_mlp_baseline import GaussianMLPBaseline
 from rllab.baselines.linear_feature_baseline import LinearFeatureBaseline
@@ -29,6 +31,7 @@ parser.add_argument('--step_size', type=float, default=1.0)
 parser.add_argument('--store_paths', type=bool, default=True)
 parser.add_argument('--action_only', type=bool, default=True)
 parser.add_argument('--mlp_baseline', type=bool, default=False)
+parser.add_argument('--lambda', type=float, default = 0.999)
 
 # Logger Params
 parser.add_argument('--exp_name', type=str, default='crosswalk_exp')
@@ -40,6 +43,16 @@ parser.add_argument('--snapshot_gap', type=int, default=100)
 parser.add_argument('--log_tabular_only', type=bool, default=False)
 parser.add_argument('--log_dir', type=str, default='../../../../scratch/mkoren/run1')
 parser.add_argument('--args_data', type=str, default=None)
+
+#Policy Params
+parser.add_argument('--hidden_dim', type=int, default=1024)
+parser.add_argument('--policy', type=str, default="LSTM")
+parser.add_argument('--use_peepholes', type=bool, default=False)
+
+#Optimizer Params
+parser.add_argument('--optimizer', type=str, default="CGO")
+
+
 #Environement Params
 
 parser.add_argument('--dt', type=float, default=0.1)
@@ -128,9 +141,17 @@ env = TfEnv(normalize(CrosswalkSensorEnv(ego=None,
                                    mean_sensor_noise = 0.0,
                                    cov_sensor_noise = 0.1,
                                    action_only = args.action_only)))
-policy = GaussianLSTMPolicy(name='lstm_policy',
-                           env_spec=env.spec,
-                            hidden_dim=256)
+
+if args.policy == "LSTM":
+    policy = GaussianLSTMPolicy(name='lstm_policy',
+                               env_spec=env.spec,
+                                hidden_dim=args.hidden_dim,
+                                use_peepholes=args.use_peepholes)
+elif args.policy == "GRU":
+    policy = GaussianGRUPolicy(name='lstm_policy',
+                                env_spec=env.spec,
+                                hidden_dim=args.hidden_dim)
+
                            # hidden_sizes=(512, 256, 128, 64, 32))
 # policy = GaussianMLPPolicy(name='mlp_policy',
 #                            env_spec=env.spec,
@@ -145,15 +166,21 @@ else:
 
 # parallel_sampler.initialize(n_parallel=4)
 # singleton_pool.initialize(n_parallel=4)
+
+if args.optimizer == "CGO":
+    optimizer = ConjugateGradientOptimizer(hvp_approach=FiniteDifferenceHvp(base_eps=1e-5))
+else:
+    optimizer = PenaltyLbfgsOptimizer(name="LBFGS")
 algo = TRPO(
     env=env,
     policy=policy,
     baseline=baseline,
     batch_size=args.batch_size,
     step_size=args.step_size,
+    gae_lambda=0.999,
     n_itr=args.iters,
     store_paths=True,
-    optimizer=ConjugateGradientOptimizer(hvp_approach=FiniteDifferenceHvp(base_eps=1e-5))
+    optimizer=optimizer
 )
 saver = tf.train.Saver(save_relative_paths=True)
 with tf.Session() as sess:
