@@ -137,10 +137,11 @@ class CrosswalkSensorEnv(Env):
             obs = np.ndarray.flatten(np.array([
                 self.x[0:self.c_num_peds],
                 self.y[0:self.c_num_peds]]))
+            obs = self.init_conditions
         else:
             obs  = np.ndarray.flatten(self._env_obs)
 
-        return Step(observation=self.init_conditions,
+        return Step(observation=obs,
                     reward=self._reward,
                     done=self._done,
                     info={'cache':self._info})
@@ -235,6 +236,12 @@ class CrosswalkSensorEnv(Env):
             # pdb.set_trace()
             return self.init_conditions
         else:
+            self._car = np.array([self.c_v_des, 0.0, self.c_car_init_x, self.c_car_init_y])
+            self._car_accel = np.zeros((2))
+            self._peds[:, 0:4] = np.array([0.0, 1.0, -0.5, -4.0])
+            self._measurements = self._peds - self._car
+            self._env_obs = self._measurements
+            self._car_obs = self._measurements
             return np.ndarray.flatten(self._measurements)
         # return np.ndarray.flatten(np.zeros_like(self._measurements))
 

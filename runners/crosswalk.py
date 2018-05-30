@@ -56,7 +56,7 @@ parser.add_argument('--optimizer', type=str, default="CGO")
 #Environement Params
 
 parser.add_argument('--dt', type=float, default=0.1)
-parser.add_argument('--num_peds', type=int, default=4)
+parser.add_argument('--num_peds', type=int, default=1)
 parser.add_argument('--alpha', type=float, default=0.85)
 parser.add_argument('--beta', type=float, default=0.005)
 parser.add_argument('--v_des', type=float, default=11.17)
@@ -151,11 +151,10 @@ elif args.policy == "GRU":
     policy = GaussianGRUPolicy(name='lstm_policy',
                                 env_spec=env.spec,
                                 hidden_dim=args.hidden_dim)
-
-                           # hidden_sizes=(512, 256, 128, 64, 32))
-# policy = GaussianMLPPolicy(name='mlp_policy',
-#                            env_spec=env.spec,
-#                            hidden_sizes=(512, 256, 128, 64, 32))
+else:
+    policy = GaussianMLPPolicy(name='mlp_policy',
+                               env_spec=env.spec,
+                               hidden_sizes=(512, 256, 128, 64, 32))
 # policy = DeterministicMLPPolicy(name='mlp_policy',
 #                                 env_spec=env.spec,
 #                                 hidden_sizes=(512, 256, 128, 64, 32))
