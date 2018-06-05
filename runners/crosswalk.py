@@ -16,6 +16,7 @@ import rllab.misc.logger as logger
 
 from mylab.crosswalk_env_2 import CrosswalkEnv
 from mylab.crosswalk_sensor_env_2 import CrosswalkSensorEnv
+from mylab.myalgo import GA
 
 import os.path as osp
 import argparse
@@ -32,6 +33,9 @@ parser.add_argument('--store_paths', type=bool, default=True)
 parser.add_argument('--action_only', type=bool, default=True)
 parser.add_argument('--mlp_baseline', type=bool, default=False)
 parser.add_argument('--lambda', type=float, default = 0.999)
+parser.add_argument('--fit_f', type=str, default='max')
+parser.add_argument('--pop_size', type=int, default=1000)
+parser.add_argument('--elites', type=int, default=20)
 
 # Logger Params
 parser.add_argument('--exp_name', type=str, default='crosswalk_exp')
@@ -170,7 +174,7 @@ if args.optimizer == "CGO":
     optimizer = ConjugateGradientOptimizer(hvp_approach=FiniteDifferenceHvp(base_eps=1e-5))
 else:
     optimizer = PenaltyLbfgsOptimizer(name="LBFGS")
-algo = TRPO(
+algo = GA(
     env=env,
     policy=policy,
     baseline=baseline,
@@ -179,7 +183,10 @@ algo = TRPO(
     gae_lambda=0.999,
     n_itr=args.iters,
     store_paths=True,
-    optimizer=optimizer
+    optimizer=optimizer,
+    pop_size=args.pop_size,
+    elites=args.elites,
+    fit_f=args.fit_f
 )
 saver = tf.train.Saver(save_relative_paths=True)
 with tf.Session() as sess:
