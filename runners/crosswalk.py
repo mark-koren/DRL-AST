@@ -24,6 +24,10 @@ from save_trials import *
 import pdb
 import tensorflow as tf
 
+from simulators.example_av_simulator import ExampleAVSimulator
+from mylab.example_av_reward import ExampleAVReward
+from mylab.ast_env import ASTEnv
+
 parser = argparse.ArgumentParser()
 #Algo Params
 parser.add_argument('--iters', type=int, default=101)
@@ -43,7 +47,7 @@ parser.add_argument('--tabular_log_file', type=str, default='tab.txt')
 parser.add_argument('--text_log_file', type=str, default='tex.txt')
 parser.add_argument('--params_log_file', type=str, default='args.txt')
 parser.add_argument('--snapshot_mode', type=str, default="gap")
-parser.add_argument('--snapshot_gap', type=int, default=100)
+parser.add_argument('--snapshot_gap', type=int, default=10)
 parser.add_argument('--log_tabular_only', type=bool, default=False)
 parser.add_argument('--log_dir', type=str, default='../../../../scratch/mkoren/run1')
 parser.add_argument('--args_data', type=str, default=None)
@@ -110,41 +114,71 @@ logger.set_snapshot_gap(args.snapshot_gap)
 logger.set_log_tabular_only(args.log_tabular_only)
 logger.push_prefix("[%s] " % args.exp_name)
 
-env = TfEnv(normalize(CrosswalkSensorEnv(ego=None,
-                                   num_peds=args.num_peds,
-                                   dt=args.dt,
-                                   alpha = args.alpha,
-                                   beta = args.beta,
-                                   v_des=args.v_des,
-                                   delta=args.delta,
-                                   t_headway=args.t_headway,
-                                   a_max=args.a_max,
-                                   s_min=args.s_min,
-                                   d_cmf=args.d_cmf,
-                                   d_max=args.d_max,
-                                   min_dist_x=args.min_dist_x,
-                                   min_dist_y=args.min_dist_y,
-                                   x_accel_low=args.x_accel_low,
-                                   y_accel_low=args.y_accel_low,
-                                   x_accel_high=args.x_accel_high,
-                                   y_accel_high=args.y_accel_high,
-                                   x_boundary_low=args.x_boundary_low,
-                                   y_boundary_low=args.y_boundary_low,
-                                   x_boundary_high=args.x_boundary_high,
-                                   y_boundary_high=args.y_boundary_high,
-                                   x_v_low=args.x_v_low,
-                                   y_v_low=args.y_v_low,
-                                   x_v_high=args.x_v_high,
-                                   y_v_high=args.y_v_high,
-                                   mean_x=args.mean_x,
-                                   mean_y=args.mean_y,
-                                   cov_x=args.cov_x,
-                                   cov_y=args.cov_y,
-                                   car_init_x=args.car_init_x,
-                                   car_init_y=args.car_init_y,
-                                   mean_sensor_noise = 0.0,
-                                   cov_sensor_noise = 0.1,
-                                   action_only = args.action_only)))
+sim = ExampleAVSimulator(ego=None,
+                           num_peds=args.num_peds,
+                           dt=args.dt,
+                           alpha = args.alpha,
+                           beta = args.beta,
+                           v_des=args.v_des,
+                           delta=args.delta,
+                           t_headway=args.t_headway,
+                           a_max=args.a_max,
+                           s_min=args.s_min,
+                           d_cmf=args.d_cmf,
+                           d_max=args.d_max,
+                           min_dist_x=args.min_dist_x,
+                           min_dist_y=args.min_dist_y,
+                           x_accel_low=args.x_accel_low,
+                           y_accel_low=args.y_accel_low,
+                           x_accel_high=args.x_accel_high,
+                           y_accel_high=args.y_accel_high,
+                           x_boundary_low=args.x_boundary_low,
+                           y_boundary_low=args.y_boundary_low,
+                           x_boundary_high=args.x_boundary_high,
+                           y_boundary_high=args.y_boundary_high,
+                           x_v_low=args.x_v_low,
+                           y_v_low=args.y_v_low,
+                           x_v_high=args.x_v_high,
+                           y_v_high=args.y_v_high,
+                           mean_x=args.mean_x,
+                           mean_y=args.mean_y,
+                           cov_x=args.cov_x,
+                           cov_y=args.cov_y,
+                           car_init_x=args.car_init_x,
+                           car_init_y=args.car_init_y,
+                           mean_sensor_noise = 0.0,
+                           cov_sensor_noise = 0.1,
+                           action_only = args.action_only,
+                         max_path_length=50)
+
+reward_function = ExampleAVReward(num_peds=args.num_peds,
+                                  cov_x=args.cov_x,
+                                  cov_y=args.cov_y,
+                                  cov_sensor_noise=0.1)
+
+env = TfEnv(normalize(ASTEnv(num_peds=args.num_peds,
+                             max_path_length=50,
+                                v_des=args.v_des,
+                                x_accel_low=args.x_accel_low,
+                                y_accel_low=args.y_accel_low,
+                                x_accel_high=args.x_accel_high,
+                                y_accel_high=args.y_accel_high,
+                                x_boundary_low=args.x_boundary_low,
+                                y_boundary_low=args.y_boundary_low,
+                                x_boundary_high=args.x_boundary_high,
+                                y_boundary_high=args.y_boundary_high,
+                                x_v_low=args.x_v_low,
+                                y_v_low=args.y_v_low,
+                                x_v_high=args.x_v_high,
+                                y_v_high=args.y_v_high,
+                                car_init_x=args.car_init_x,
+                                car_init_y=args.car_init_y,
+                                action_only = args.action_only,
+                                sample_init_state=True,
+                                s_0=None,
+                                simulator=sim,
+                                reward_function=reward_function,
+                             )))
 
 if args.policy == "LSTM":
     policy = GaussianLSTMPolicy(name='lstm_policy',
@@ -174,21 +208,32 @@ if args.optimizer == "CGO":
     optimizer = ConjugateGradientOptimizer(hvp_approach=FiniteDifferenceHvp(base_eps=1e-5))
 else:
     optimizer = PenaltyLbfgsOptimizer(name="LBFGS")
-algo = GA(
+
+algo = TRPO(
     env=env,
     policy=policy,
-    baseline=baseline,
+    baseline=LinearFeatureBaseline(env_spec=env.spec),
     batch_size=args.batch_size,
     step_size=args.step_size,
-    gae_lambda=0.999,
     n_itr=args.iters,
     store_paths=True,
-    optimizer=optimizer,
-    pop_size=args.pop_size,
-    elites=args.elites,
-    fit_f=args.fit_f
+    optimizer=ConjugateGradientOptimizer(hvp_approach=FiniteDifferenceHvp(base_eps=1e-5))
 )
-saver = tf.train.Saver(save_relative_paths=True)
+# algo = GA(
+#     env=env,
+#     policy=policy,
+#     baseline=baseline,
+#     batch_size=args.batch_size,
+#     step_size=args.step_size,
+#     gae_lambda=0.999,
+#     n_itr=args.iters,
+#     store_paths=True,
+#     optimizer=optimizer,
+#     pop_size=args.pop_size,
+#     elites=args.elites,
+#     fit_f=args.fit_f
+# )
+# saver = tf.train.Saver(save_relative_paths=True)
 with tf.Session() as sess:
     algo.train(sess=sess)
 

@@ -2,8 +2,105 @@ from rllab.envs.base import Env
 from rllab.envs.base import Step
 from rllab.spaces import Box
 import numpy as np
+from simulators.generic_interactive_simulator import GenericInteractiveSimulator
+import pdb
 
 class CrosswalkSensorEnv(Env):
+    def __init__(self,
+                 ego = None,
+                 num_peds = 1,
+                 dt = 0.1,
+                 alpha = 0.85,
+                 beta = 0.005,
+                 v_des = 11.17,
+                 delta = 4.0,
+                 t_headway = 1.5,
+                 a_max = 3.0,
+                 s_min = 4.0,
+                 d_cmf = 2.0,
+                 d_max = 9.0,
+                 min_dist_x = 2.5,
+                 min_dist_y = 1.4,
+                 x_accel_low = -1.0,
+                 y_accel_low = -1.0,
+                 x_accel_high = 1.0,
+                 y_accel_high = 1.0,
+                 x_boundary_low = -10.0,
+                 y_boundary_low = -10.0,
+                 x_boundary_high = 10.0,
+                 y_boundary_high = 10.0,
+                 x_v_low = -10.0,
+                 y_v_low = -10.0,
+                 x_v_high = 10.0,
+                 y_v_high = 10.0,
+                 mean_x = 0.0,
+                 mean_y = 0.0,
+                 cov_x = 0.1,
+                 cov_y = 0.01,
+                 car_init_x = 35.0,
+                 car_init_y = 0.0,
+                 mean_sensor_noise = 0.0,
+                 cov_sensor_noise = 0.1,
+                 action_only = True,
+                 simulator = GenericInteractiveSimulator):
+        #Constant hyper-params -- set by user
+        self.c_num_peds = num_peds
+        self.c_dt = dt
+        self.c_alpha = alpha
+        self.c_beta = beta
+        self.c_v_des = v_des
+        self.c_delta = delta
+        self.c_t_headway = t_headway
+        self.c_a_max = a_max
+        self.c_s_min = s_min
+        self.c_d_cmf = d_cmf
+        self.c_d_max = d_max
+        self.c_min_dist = np.array([min_dist_x, min_dist_y])
+        self.c_x_accel_low = x_accel_low
+        self.c_y_accel_low = y_accel_low
+        self.c_x_accel_high = x_accel_high
+        self.c_y_accel_high = y_accel_high
+        self.c_x_boundary_low = x_boundary_low
+        self.c_y_boundary_low = y_boundary_low
+        self.c_x_boundary_high = x_boundary_high
+        self.c_y_boundary_high = y_boundary_high
+        self.c_x_v_low = x_v_low
+        self.c_y_v_low = y_v_low
+        self.c_x_v_high = x_v_high
+        self.c_y_v_high = y_v_high
+        self.c_mean_x = mean_x
+        self.c_mean_y = mean_y
+        self.c_cov_x = cov_x
+        self.c_cov_y = cov_y
+        self.c_car_init_x = car_init_x
+        self.c_car_init_y = car_init_y
+        self.c_mean_sensor_noise = mean_sensor_noise
+        self.c_cov_sensor_noise = cov_sensor_noise
+        self.action_only = action_only
+
+        #These are set by reset, not the user
+        self._car = np.zeros((4))
+        self._car_accel = np.zeros((2))
+        self._peds = np.zeros((self.c_num_peds, 4))
+        self._measurements = np.zeros((self.c_num_peds, 4))
+        self._car_obs = np.zeros((self.c_num_peds, 4))
+        self._env_obs = np.zeros((self.c_num_peds, 4))
+        self._done = False
+        self._reward = 0.0
+        self._info = []
+        self._step = 0
+        self._action = None
+        self._first_step = True
+        self.directions = np.random.randint(2, size=self.c_num_peds) * 2 - 1
+        self.y = np.random.rand(self.c_num_peds) * 14 - 5
+        self.x = np.random.rand(self.c_num_peds) * 4 - 2
+        self.low_start_bounds = [-1.0, -4.25, -1.0, 5.0, 0.0, -6.0, 0.0, 5.0]
+        self.high_start_bounds = [0.0, -3.75, 0.0, 9.0, 1.0, -2.0, 1.0, 9.0]
+        self.v_start = [1.0, -1.0, 1.0, -1.0]
+        self.simulator = simulator
+
+        super().__init__()
+
     def step(self, action):
         """
         Run one timestep of the environment's dynamics. When end of episode
@@ -19,98 +116,57 @@ class CrosswalkSensorEnv(Env):
         done : a boolean, indicating whether the episode has ended
         info : a dictionary containing other diagnostic information from the previous action
         """
-        v_old, x_c_old, y_c_old, x_p_old, y_p_old = self._state
-        del_x, del_y, sensor_a, sensor_b, sensor_c = action
-        x_p = x_p_old + del_x
-        y_p = y_p_old + del_y
-        x_d = x_p - x_c_old
-        y_d = y_p - y_c_old
+        self._action = action
+        #Calculate the reward for this step
+        self.give_reward()
 
-        if ((abs(x_d) >= 2.5) or (y_d/np.maximum(v_old, 1e-7) > 2.0)) or \
-                (abs(x_d) <= 1.0 and sensor_b >= 0.5) or \
-                (x_d > 1.0 and x_d < 2.5 and sensor_c >= 0.5) or \
-                (x_d < -1.0 and x_d > -2.5 and sensor_a >= 0.5):
-            v_new = np.minimum(4.0, v_old + 1.0)
+        self.simulator.step(self._action)
+        if self.simulator.is_goal():
+            done = True
+            self._reward = self.simulator.getTerminalReward()
+        #Update instance attributes
+        self.log()
+
+        if self.action_only:
+            obs = np.ndarray.flatten(np.array([
+                self.x[0:self.c_num_peds],
+                self.y[0:self.c_num_peds]]))
+            obs = self.init_conditions
         else:
-            v_new = np.maximum(0.0, v_old - 1.0)
-        # v_new = 4.0
-        y_c = y_c_old + 0.5 * (v_old + v_new) * 5.0
-        x_c = x_c_old
+            obs  = np.ndarray.flatten(self._env_obs)
 
-        y_d_new = y_p - y_c
-        x_d_new = x_d
-        if y_d_new < 0.0:
-            if abs(x_d_new) < 1.0:
-                done = True
-                reward = 0
-            else:
-                done = True
-                reward = -10000-100*np.sqrt(x_d_new**2 + y_d_new**2)
-        else:
-            done = False
-            reward = -np.log(1 + self.mahalanobis_d(action[0:2])) - np.log(self.sensor_probability(action[2:6]))
-
-        cache = np.array([0,
-                          self._step,
-                          self._state[0],
-                          self._state[1],
-                          self._state[2],
-                          self._state[3],
-                          self._state[4],
-                          action[0],
-                          action[1],
-                          action[2],
-                          action[3],
-                          action[4],
-                          reward,
-                          v_new,
-                          x_c,
-                          y_c,
-                          x_p,
-                          y_p])
-        self._cache_list.append(cache)
-        self._state = np.array([v_new, x_c, y_c, x_p, y_p])
-        self._step += 1
-        observation = np.array([v_new, x_d_new, y_d_new])
-        # print('Step Taken ' + str(self._step))
-        return Step(observation=observation, reward=reward, done=done, info={'cache':cache})
+        return Step(observation=obs,
+                    reward=self._reward,
+                    done=self._done,
+                    info={'cache':self._info})
 
     def mahalanobis_d(self, action):
-        #TODO get mean and covariance from G
         #load G
         #bundle = G(self._state)
         #mean = G[0:2].T
         #cov = np.array([[G[2], 0],[0, G[3]])
-        mean = np.array([[-1.5],[0.0]])
-        cov = np.array([[0.75, 0], [0, 1.0]])
-        action_v = action.reshape((2,1))
+        mean = np.zeros((6*self.c_num_peds,1))
+        # mean = np.array([[self.c_mean_x],[self.c_mean_y]])
+        # cov = np.array([[self.c_cov_x, 0], [0, self.c_cov_y]])
+        cov = np.zeros((self.c_num_peds, 6))
+        cov[:,0:6] = np.array([self.c_cov_x, self.c_cov_y,
+                               self.c_cov_sensor_noise, self.c_cov_sensor_noise,
+                               self.c_cov_sensor_noise, self.c_cov_sensor_noise])
+        big_cov = np.diagflat(cov)
 
-        dif = (action_v - mean)
-        inv_cov = np.linalg.inv(cov)
-        dist = np.dot(np.dot(dif.T, inv_cov), dif)
-        return np.sqrt(dist[0,0])
+        # inv_cov = np.linalg.inv(cov)
+        # big_cov_diag = np.zeros((2*self.c_num_peds))
+        # big_cov_diag[::2] = inv_cov[0,0]
+        # big_cov_diag[1::2] = inv_cov[1, 1]
+        # big_cov = np.diag(big_cov_diag)
 
-    def sensor_probability(self, action):
-        prob_a = np.array([0.9999, 0.0001])
-        prob_b = np.array([0.9999, 0.0001])
-        prob_c = np.array([0.9999, 0.0001])
-        total_prob = 1.0
-        if action[0] < 0.5:
-            total_prob *= prob_a[0]
-        else:
-            total_prob *= prob_a[1]
+        dif = np.copy(action)
+        dif[::2] -= mean[0,0]
+        dif[1::2] -= mean[1, 0]
+        dist = np.dot(np.dot(dif.T, np.linalg.inv(big_cov)), dif)
+        # print(dist)
+        return np.sqrt(dist)
 
-        if action[1] < 0.5:
-            total_prob *= prob_b[0]
-        else:
-            total_prob *= prob_b[1]
-
-        if action[2] < 0.5:
-            total_prob *= prob_c[0]
-        else:
-            total_prob *= prob_c[1]
-
-        return total_prob
 
     def reset(self):
         """
@@ -119,30 +175,147 @@ class CrosswalkSensorEnv(Env):
         -------
         observation : the initial observation of the space. (Initial reward is assumed to be 0.)
         """
-        self._cache_list = []
+
+        # self._car = np.zeros((4))
+        # self._car_accel = np.zeros((2))
+        # self._peds = np.zeros((self._num_peds, 4))
+        # self._measurements = np.zeros()
+        # self._car_obs = np.zeros()
+        # self._env_obs = np.zeros()
+        # self._done = False
+        # self._reward = 0.0
+        # self._info = []
+        self._info = []
         self._step = 0
-        self._state = np.array([4.0, 4.5, 0.0, 6.5, 50.0])
-        observation = np.array([self._state[0],
-                                self._state[3] - self._state[1],
-                                self._state[4] - self._state[2]])
-        return observation
+        self.init_conditions = self.observation_space.sample()
+        # self.init_conditions[0] = 0.0
+        # self.init_conditions[1] = -4.0
+        # v_des = np.random.uniform(self.c_v_des*0.75, self.c_v_des*1.25)
+        v_des = self.init_conditions[3*self.c_num_peds]
+        # car_init_x = np.random.uniform(self.c_car_init_x*0.75, self.c_car_init_x*1.25)
+        car_init_x = self.init_conditions[3*self.c_num_peds + 1]
+        self._car = np.array([v_des, 0.0, car_init_x, self.c_car_init_y])
+        self._car_accel = np.zeros((2))
+        # pos = np.random.uniform(self.low_start_bounds, self.high_start_bounds)
+        pos = self.init_conditions[0:2*self.c_num_peds]
+        self.x = pos[0:self.c_num_peds*2:2]
+        self.y = pos[1:self.c_num_peds*2:2]
+        # for i in range(self.c_num_peds):
+        #     self._peds[i,0:4] = np.array([0.0, self.v_start[i], self.x[i],self.y[i]])
+        # pdb.set_trace()
+        # v_start = np.random.uniform(
+        #     np.array(self.v_start[0:self.c_num_peds])*0.0,
+        #     np.array(self.v_start[0:self.c_num_peds])*2.0)
+        v_start = self.init_conditions[2*self.c_num_peds:3*self.c_num_peds]
+        self._peds[0:self.c_num_peds, 0] = np.zeros((self.c_num_peds))
+        self._peds[0:self.c_num_peds, 1] = v_start
+        self._peds[0:self.c_num_peds, 2] = self.x
+        self._peds[0:self.c_num_peds, 3] = self.y
+        # self._peds[1, 0:4] = np.array([0.0, 1.0, 0.5, -2.0])
+        # self._peds[1, 0:4] = np.array([0.0, -1.0, 0.0, 5.0])
+        # self._peds[1, 0:4] = np.array([0.0, 1.0, 0.5, -4.0])
+        # self._peds[2, 0:4] = np.array([0.0, 1.0, -0.5, -4.0])
+        # self._peds[:, 0] = 0.0
+        # self._peds[:, 1] = self.directions
+        # self._peds[:,2] = self.x
+        # self._peds[:, 3] = self.y
+        # dist = self._peds[:, 2:4] - self._car[2:4]
+
+        self._measurements = self._peds - self._car
+        self._env_obs = self._measurements
+        self._car_obs = self._measurements
+        self._first_step = True
+        if self.action_only:
+            # self.init_conditions = np.ndarray.flatten(np.array([self.x, self.y, v_start, v_des, car_init_x]))
+            # pdb.set_trace()
+            return self.init_conditions
+        else:
+            self._car = np.array([self.c_v_des, 0.0, self.c_car_init_x, self.c_car_init_y])
+            self._car_accel = np.zeros((2))
+            self._peds[:, 0:4] = np.array([0.0, 1.0, -0.5, -4.0])
+            self._measurements = self._peds - self._car
+            self._env_obs = self._measurements
+            self._car_obs = self._measurements
+            return np.ndarray.flatten(self._measurements)
+        # return np.ndarray.flatten(np.zeros_like(self._measurements))
+
 
     @property
     def action_space(self):
         """
         Returns a Space object
         """
-        return Box(low=np.array([-5.0,-2.0, 0.0, 0.0, 0.0]), high=np.array([5.0,2.0, 1.0, 1.0, 1.0]))
+        low = np.array([self.c_x_accel_low,self.c_y_accel_low, 0.0, 0.0, 0.0, 0.0])
+        high = np.array([self.c_x_accel_high, self.c_y_accel_high, 1.0, 1.0, 1.0, 1.0])
+
+        for i in range(1, self.c_num_peds):
+            low = np.hstack((low, np.array([self.c_x_accel_low,self.c_y_accel_low, 0.0, 0.0, 0.0, 0.0])))
+            high = np.hstack((high, np.array([self.c_x_accel_high,self.c_y_accel_high, 1.0, 1.0, 1.0, 1.0])))
+
+        return Box(low=low, high=high)
 
     @property
     def observation_space(self):
         """
         Returns a Space object
         """
-        return Box(low=np.array([0.0,-9.0,0.0]), high=np.array([4.0, 9.0, 99.0]))
+
+        low = np.array([self.c_x_v_low, self.c_y_v_low, self.c_x_boundary_low, self.c_y_boundary_low])
+        high = np.array([self.c_x_v_high, self.c_y_v_high, self.c_x_boundary_high, self.c_y_boundary_high])
+
+        for i in range(1, self.c_num_peds):
+            low = np.hstack((low, np.array([self.c_x_v_low, self.c_y_v_low, self.c_x_boundary_low, self.c_y_boundary_low])))
+            high = np.hstack((high, np.array([self.c_x_v_high, self.c_y_v_high, self.c_x_boundary_high, self.c_y_boundary_high])))
+
+        if self.action_only:
+            low = self.low_start_bounds[:self.c_num_peds*2]
+            low = low + np.ndarray.tolist(0.0*np.array(self.v_start))[:self.c_num_peds]
+            low = low + [0.75*self.c_v_des]
+            low = low + [0.75*self.c_car_init_x]
+            high = self.high_start_bounds[:self.c_num_peds * 2]
+            high = high + np.ndarray.tolist(2.0 * np.array(self.v_start))[:self.c_num_peds]
+            high = high + [1.25 * self.c_v_des]
+            high = high + [1.25 * self.c_car_init_x]
+
+        # pdb.set_trace()
+        return Box(low=np.array(low), high=np.array(high))
 
     def render(self):
-        print(self._state)
+        print(':(')
 
     def get_cache_list(self):
-        return self._cache_list
+        return self._info
+
+
+    def give_reward(self):
+        # pdb.set_trace()
+
+
+        # if np.any(dist) < -10.0 or self._step > 100:
+        #     self._done = True
+
+    def observe(self):
+        self._env_obs = self._peds - self._car
+
+    def log(self):
+        # cache = np.zeros(((2 + #itr/step place holder
+        #                       4 + #car state
+        #                       4*self._num_peds + #ped states
+        #                       2*self._num_peds + #ped actions
+        #                       1 ))) # reward
+        # cache[1] = self._step
+        # cache[2:2+self._state.shape[-1]] = self._state
+        # cache[2+self._state.shape[-1]:2+self._state.shape[-1]+action.shape[-1]] = action
+        # cache[-1] = reward
+        cache = np.hstack([0.0, #Dummy, will be filled in with trial # during post processing in save_trials.py
+                           self._step,
+                           np.ndarray.flatten(self._car),
+                           np.ndarray.flatten(self._peds),
+                           np.ndarray.flatten(self._action),
+                           self._reward])
+        # pdb.set_trace()
+        self._info = cache
+        self._step += 1
+        if np.isnan(self._reward):
+            pdb.set_trace()
+
