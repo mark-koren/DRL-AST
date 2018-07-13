@@ -27,6 +27,7 @@ import tensorflow as tf
 from simulators.example_av_simulator import ExampleAVSimulator
 from mylab.example_av_reward import ExampleAVReward
 from mylab.ast_env import ASTEnv
+from mylab.ast_vectorized_sampler import ASTVectorizedSampler
 
 parser = argparse.ArgumentParser()
 #Algo Params
@@ -62,7 +63,7 @@ parser.add_argument('--optimizer', type=str, default="CGO")
 
 
 #Environement Params
-
+parser.add_argument('--interactive', type=bool, default=False)
 parser.add_argument('--dt', type=float, default=0.1)
 parser.add_argument('--num_peds', type=int, default=1)
 parser.add_argument('--alpha', type=float, default=0.85)
@@ -175,7 +176,7 @@ env = TfEnv(normalize(ASTEnv(num_peds=args.num_peds,
                                 car_init_y=args.car_init_y,
                                 action_only = args.action_only,
                                 sample_init_state=True,
-                                s_0=None,
+                                s_0=[-0.5, -4.0, 1.0, 11.17, -35.0],
                                 simulator=sim,
                                 reward_function=reward_function,
                              )))
@@ -209,6 +210,8 @@ if args.optimizer == "CGO":
 else:
     optimizer = PenaltyLbfgsOptimizer(name="LBFGS")
 
+sampler_cls = ASTVectorizedSampler
+
 algo = TRPO(
     env=env,
     policy=policy,
@@ -217,7 +220,11 @@ algo = TRPO(
     step_size=args.step_size,
     n_itr=args.iters,
     store_paths=True,
-    optimizer=ConjugateGradientOptimizer(hvp_approach=FiniteDifferenceHvp(base_eps=1e-5))
+    optimizer=ConjugateGradientOptimizer(hvp_approach=FiniteDifferenceHvp(base_eps=1e-5)),
+    max_path_length=50,
+    sampler_cls=sampler_cls,
+    sampler_args= {"sim": sim,
+                    "reward_function": reward_function}
 )
 # algo = GA(
 #     env=env,

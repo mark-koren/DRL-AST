@@ -20,6 +20,7 @@ def save_trials(iters, path, header, sess, save_every_n = 100):
             crashes = np.array([]).reshape(0, paths[0]['env_infos']['info']['cache'].shape[1])
             for n, a_path in enumerate(paths):
                 cache = a_path['env_infos']['info']['cache']
+                # pdb.set_trace()
                 cache[:, 0] = n
                 trials = np.concatenate((trials, cache), axis=0)
                 if cache[-1,-1] == 0.0:
