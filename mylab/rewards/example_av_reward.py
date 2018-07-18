@@ -1,4 +1,4 @@
-from mylab.ast_reward import ASTReward
+from mylab.rewards.ast_reward import ASTReward
 import numpy as np
 import pdb
 

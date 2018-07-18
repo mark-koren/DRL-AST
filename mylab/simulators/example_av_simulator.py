@@ -1,7 +1,7 @@
 from rllab.envs.base import Env
 from rllab.envs.base import Step
 from rllab.spaces import Box
-from simulators.simulator import Simulator
+from mylab.simulators.simulator import Simulator
 import numpy as np
 
 import pdb

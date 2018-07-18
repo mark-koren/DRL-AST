@@ -10,6 +10,8 @@ Welcome to Adaptive Stress Testing's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   tutorial
+
 
 
 Indices and tables
