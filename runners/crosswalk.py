@@ -240,7 +240,7 @@ algo = TRPO(
 #     elites=args.elites,
 #     fit_f=args.fit_f
 # )
-# saver = tf.train.Saver(save_relative_paths=True)
+saver = tf.train.Saver(save_relative_paths=True)
 with tf.Session() as sess:
     algo.train(sess=sess)
 
