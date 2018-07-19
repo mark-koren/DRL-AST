@@ -66,16 +66,16 @@ class Simulator(object):
         """
         raise NotImplementedError
 
-    def log(self):
-        """
-        perform any logging steps
-        """
-        pass
-
     def is_goal(self):
         """
         returns whether the current state is in the goal set
         :return: boolean, true if current state is in goal set.
         """
         raise NotImplementedError
+
+    def log(self):
+        """
+        perform any logging steps
+        """
+        pass
 

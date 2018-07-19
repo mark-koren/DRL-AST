@@ -86,7 +86,7 @@ Start by creating a file named ``example_av_simulator.py`` in the ``simulators``
 The base generator accepts one input:
 * **max_path_length**: The horizon of the simulation, in number of timesteps
 
-A child of the Simulator class is required to define the following five functions: ``simulate``, ``step``, ``reset``, ``get_reward_info``, and ``is\_goal``. An optional ``log`` function may also be implemented. 
+A child of the Simulator class is required to define the following five functions: ``simulate``, ``step``, ``reset``, ``get_reward_info``, and ``is_goal``. An optional ``log`` function may also be implemented. 
 
 2.3 Initializing the Example Simulator
 --------------------------------------
@@ -172,5 +172,159 @@ In addition, there are a number of member variables that need to be initialized.
         #initialize the base Simulator
         super().__init__(**kwargs)
 
+2.4 The ``simulate`` function:
+------------------------------
 
-2.4
+The simulate function runs a simulation using previously generated actions from the policy to control the stochasticity. The simulate function accepts a list of actions and an intitial state. It should run the simulation, then return the timestep that the goal state was achieved, or a -1 if the horizon was reached first. To do this, first add the following code to the file to handle the simulation aspect:
+
+:: 
+    def sensors(self, car, peds, noise):
+
+        measurements = peds + noise
+        return measurements
+
+    def tracker(self, observation_old, measurements):
+        observation = np.zeros_like(observation_old)
+
+        observation[:, 0:2] = observation_old[:, 0:2]
+        observation[:, 2:4] = observation_old[:, 2:4] + self.c_dt * observation_old[:, 0:2]
+        residuals = measurements[:, 2:4] - observation[:, 2:4]
+
+        observation[:, 2:4] += self.c_alpha * residuals
+        observation[:, 0:2] += self.c_beta / self.c_dt * residuals
+
+        return observation
+
+    def update_car(self, obs, v_car):
+
+        cond = np.repeat(np.resize(np.logical_and(obs[:, 3] > -1.5, obs[:, 3] < 4.5), (self.c_num_peds, 1)), 4, axis=1)
+        in_road = np.expand_dims(np.extract(cond, obs), axis=0)
+
+        if in_road.size != 0:
+            mins = np.argmin(in_road.reshape((-1, 4)), axis=0)
+            v_oth = obs[mins[3], 0]
+            s_headway = obs[mins[3], 2] - self._car[2]
+
+            del_v = v_oth - v_car
+            s_des = self.c_s_min + v_car * self.c_t_headway - v_car * del_v / (2 * np.sqrt(self.c_a_max * self.c_d_cmf))
+            if self.c_v_des > 0.0:
+                v_ratio = v_car / self.c_v_des
+            else:
+                v_ratio = 1.0
+
+            a = self.c_a_max * (1.0 - v_ratio ** self.c_delta - (s_des / s_headway) ** 2)
+
+        else:
+            del_v = self.c_v_des - v_car
+            a = del_v
+
+        if np.isnan(a):
+            pdb.set_trace()
+
+        return np.clip(a, -self.c_d_max, self.c_a_max)
+
+    def move_car(self, car, accel):
+        car[2:4] += self.c_dt * car[0:2]
+        car[0:2] += self.c_dt * accel
+        return car
+
+    def update_peds(self):
+        # Update ped state from actions
+        action = self._action.reshape((self.c_num_peds, 6))[:, 0:2]
+
+        mod_a = np.hstack((action,
+                           self._peds[:, 0:2] + 0.5 * self.c_dt * action))
+        if np.any(np.isnan(mod_a)):
+            pdb.set_trace()
+
+        self._peds += self.c_dt * mod_a
+        if np.any(np.isnan(self._peds)):
+            pdb.set_trace()
+
+    def observe(self):
+        self._env_obs = self._peds - self._car
+
+These functions handle the backend simulation of the toy problem and the SUT. Now we implement the ``simulate`` function, checking to be sure that the horizon wasn't reached:
+
+::
+    def simulate(self, actions, s_0):
+        """
+        Run/finish the simulation
+        Input
+        -----
+        action : A sequential list of actions taken by the simulation
+        Outputs
+        -------
+        (terminal_index)
+        terminal_index : The index of the action that resulted in a state in the goal set E. If no state is found
+                        terminal_index should be returned as -1.
+
+        """
+        # initialize the simulation
+        path_length = 0
+        self.reset(s_0)
+        self._info  = []
+
+        # Take simulation steps unbtil horizon is reached
+        while path_length < self.c_max_path_length:
+            #get the action from the list
+            self._action = actions[path_length]
+
+            # move the peds
+            self.update_peds()
+
+            # move the car
+            self._car = self.move_car(self._car, self._car_accel)
+
+            # take new measurements and noise them
+            noise = self._action.reshape((self.c_num_peds,6))[:, 2:6]
+            self._measurements = self.sensors(self._car, self._peds, noise)
+
+            # filter out the noise with an alpha-beta tracker
+            self._car_obs = self.tracker(self._car_obs, self._measurements)
+
+            # select the SUT action for the next timestep
+            self._car_accel[0] = self.update_car(self._car_obs, self._car[0])
+
+            # grab simulation state, if interactive
+            self.observe()
+
+            # record step variables
+            self.log()
+
+            # check if a crash has occurred. If so return the timestep, otherwise continue
+            if self.is_goal():
+                return path_length, np.array(self._info)
+            path_length = path_length + 1
+
+        # horizon reached without crash, return -1
+        self._is_terminal = True
+        return -1, np.array(self._info)
+
+2.5 The ``step`` function:
+If a simulation is interactive, the ``step`` function should interact with it at each timestep. The functions takes as input the current action. If the action is interactive and the simulation state is being used, return the state. Otherwise, return ``None``. If the simulation is non-interactive, other per-step actions can still be put here if neccessary - this function is called at each timestep either way. However, there is nothing to do at each step in this case, so the function will just return ``None``.
+
+::
+    def step(self, action):
+        """
+        Handle anything that needs to take place at each step, such as a simulation update or write to file
+        Input
+        -----
+        action : action taken on the turn
+        Outputs
+        -------
+        (terminal_index)
+        terminal_index : The index of the action that resulted in a state in the goal set E. If no state is found
+                        terminal_index should be returned as -1.
+
+        """
+        return None
+
+2.6 The ``reset`` function:
+
+2.7 The ``get_reward_info`` function:
+
+2.8 The ``is_goal`` function:
+
+2.9 The ``log`` function (Optional):
+

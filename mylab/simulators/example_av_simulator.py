@@ -84,23 +84,44 @@ class ExampleAVSimulator(Simulator):
                         terminal_index should be returned as -1.
 
         """
+        # initialize the simulation
         path_length = 0
         self.reset(s_0)
         self._info  = []
+
+        # Take simulation steps unbtil horizon is reached
         while path_length < self.c_max_path_length:
+            #get the action from the list
             self._action = actions[path_length]
+
+            # move the peds
             self.update_peds()
+
+            # move the car
             self._car = self.move_car(self._car, self._car_accel)
+
+            # take new measurements and noise them
             noise = self._action.reshape((self.c_num_peds,6))[:, 2:6]
             self._measurements = self.sensors(self._car, self._peds, noise)
+
+            # filter out the noise with an alpha-beta tracker
             self._car_obs = self.tracker(self._car_obs, self._measurements)
+
+            # select the SUT action for the next timestep
             self._car_accel[0] = self.update_car(self._car_obs, self._car[0])
+
+            # grab simulation state, if interactive
             self.observe()
+
+            # record step variables
             self.log()
+
+            # check if a crash has occurred. If so return the timestep, otherwise continue
             if self.is_goal():
                 return path_length, np.array(self._info)
             path_length = path_length + 1
 
+        # horizon reached without crash, return -1
         self._is_terminal = True
         return -1, np.array(self._info)
 
@@ -118,27 +139,6 @@ class ExampleAVSimulator(Simulator):
 
         """
         return None
-
-    def get_reward_info(self):
-        """
-        returns any info needed by the reward function to calculate the current reward
-        """
-
-        return {"peds": self._peds,
-                "car": self._car,
-                "is_goal": self.is_goal(),
-                "is_terminal": self._is_terminal}
-
-    def is_goal(self):
-        """
-        returns whether the current state is in the goal set
-        :return: boolean, true if current state is in goal set.
-        """
-        dist = self._peds[:, 2:4] - self._car[2:4]
-        if (np.any(np.all(np.less_equal(abs(dist), self.c_min_dist), axis=1))):
-            return True
-
-        return False
 
     def reset(self, s_0):
         """
@@ -186,6 +186,37 @@ class ExampleAVSimulator(Simulator):
             return np.ndarray.flatten(self._measurements)
 
 
+    def get_reward_info(self):
+        """
+        returns any info needed by the reward function to calculate the current reward
+        """
+
+        return {"peds": self._peds,
+                "car": self._car,
+                "is_goal": self.is_goal(),
+                "is_terminal": self._is_terminal}
+
+    def is_goal(self):
+        """
+        returns whether the current state is in the goal set
+        :return: boolean, true if current state is in goal set.
+        """
+        dist = self._peds[:, 2:4] - self._car[2:4]
+        if (np.any(np.all(np.less_equal(abs(dist), self.c_min_dist), axis=1))):
+            return True
+
+        return False
+
+    def log(self):
+        #Create a cache of step specific variables for post-simulation analysis
+        cache = np.hstack([0.0,  # Dummy, will be filled in with trial # during post processing in save_trials.py
+                           self._step,
+                           np.ndarray.flatten(self._car),
+                           np.ndarray.flatten(self._peds),
+                           np.ndarray.flatten(self._action),
+                           0.0])
+        self._info.append(cache)
+        self._step += 1
 
     def sensors(self, car, peds, noise):
 
@@ -252,16 +283,3 @@ class ExampleAVSimulator(Simulator):
 
     def observe(self):
         self._env_obs = self._peds - self._car
-
-    def log(self):
-        #Create a cache of step specific variables for post-simulation analysis
-        cache = np.hstack([0.0,  # Dummy, will be filled in with trial # during post processing in save_trials.py
-                           self._step,
-                           np.ndarray.flatten(self._car),
-                           np.ndarray.flatten(self._peds),
-                           np.ndarray.flatten(self._action),
-                           0.0])
-        self._info.append(cache)
-        self._step += 1
-
-
