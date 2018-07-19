@@ -175,7 +175,7 @@ In addition, there are a number of member variables that need to be initialized.
 2.4 The ``simulate`` function:
 ------------------------------
 
-The simulate function runs a simulation using previously generated actions from the policy to control the stochasticity. The simulate function accepts a list of actions and an intitial state. It should run the simulation, then return the timestep that the goal state was achieved, or a -1 if the horizon was reached first. To do this, first add the following code to the file to handle the simulation aspect:
+The simulate function runs a simulation using previously generated actions from the policy to control the stochasticity. The simulate function accepts a list of actions and an intitial state. It should run the simulation, then return the timestep that the goal state was achieved, or a -1 if the horizon was reached first. In addition, this function should return any simulation info needed for post-analysis. To do this, first add the following code to the file to handle the simulation aspect:
 
 :: 
     def sensors(self, car, peds, noise):
@@ -419,4 +419,17 @@ This function returns a boolean value indicating if the current state is in the 
 2.9 The ``log`` function (Optional):
 ------------------------------------
 
+The log function is a way to store variables from the simulator for later access. In the example, some simulation state information is appended to a list at every timestep.
+
+::
+    def log(self):
+        # Create a cache of step specific variables for post-simulation analysis
+        cache = np.hstack([0.0,  # Dummy, will be filled in with trial # during post processing in save_trials.py
+                           self._step,
+                           np.ndarray.flatten(self._car),
+                           np.ndarray.flatten(self._peds),
+                           np.ndarray.flatten(self._action),
+                           0.0])
+        self._info.append(cache)
+        self._step += 1
 
