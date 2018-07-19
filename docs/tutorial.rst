@@ -63,4 +63,38 @@ to the AST solver. Passing the simulation state to the solver may reduce the num
 converge to a solution. However, pausing the simulation at each step may introduce overhead which slows
 the execution. Neither variant is inherently better, so use whatever is appropriate for your project.
 
+2.2 Inheriting the Base Simulator
+---------------------------------
 
+Start by creating a file named ''example_av_simulator.py'' in the ''simulators'' folder. Create a class titled
+''ExampleAVSimulator'', which inherits from ''Simulator''.
+
+::
+
+	#import base Simulator class
+	from mylab.simulators.simulator import Simulator
+
+	#Used for math and debugging
+	import numpy as np
+	import pdb
+
+	#Define the class
+	class ExampleAVSimulator(Simulator):
+
+Our example simulator will control a modified version of the Intelligent Driver Model (IDM) as our SUT, while adding sensor noise and filtering it out with an alpha-beta tracker. Initial simulation conditions are needed here as well. Because of all thise, the Simulator accepts a number of inputs:
+
+* **num\_peds**: The number of pedestrians in the scenario
+* **dt**: The length of the time step, in seconds
+* **alpha**: A hyperparameter controlling the alpha-beta tracker that filters noise from the sensors
+* **beta**: A hyperparameter controlling the alpha-beta tracker that filters noise from the sensors
+* **v\_des**: The desired speed of the SUT
+* **t\_headway**: An IDM hyperparameter that controls the target seperation between the SUT and the agent it is following, measured in seconds
+* **a\_max**: An IDM hyperparameter that controls the maximum acceleration of the SUT
+* **s\_min**: An IDM hyperparameter that controls the minimum distance between the SUT and the agent it is following
+* **d\_cmf**: An IDM hyperparameter that controls the maximum comfortable decceleration of the SUT (a soft maximum that is only violated to avoid crashes)
+* **d\_max**: An IDM hyperparameter that controls the maximum decceleration of the SUT
+* **min\_dist\_x**: Defines the length of the hitbox in the x direction
+* **min\_dist\_y**: Defines the length of the hitbox in the y direction
+* **car\_init\_x**: Specifies the initial x-position of the SUT
+* **car\_init\_y**: Specifies the initial y-position of the SUT
+* **action\_only**: A boolean value specifying whether the simulation state is unobserved, so only the previous action will be used as input to the policy. Only set to False if you have an interactive simulatior with an observable state, and you would like to pass that state as part of the input to the policy (see `section 2.1`_)

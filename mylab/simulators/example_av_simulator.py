@@ -1,15 +1,14 @@
-from rllab.envs.base import Env
-from rllab.envs.base import Step
-from rllab.spaces import Box
+#import base Simulator class
 from mylab.simulators.simulator import Simulator
+#Used for math and debugging
 import numpy as np
-
 import pdb
-
+#Define the class
 class ExampleAVSimulator(Simulator):
     """
     Class template for a non-interactive simulator.
     """
+    #Accept parameters for defining the behavior of the system under test[SUT]
     def __init__(self,
                  ego = None,
                  num_peds = 1,
@@ -25,26 +24,8 @@ class ExampleAVSimulator(Simulator):
                  d_max = 9.0,
                  min_dist_x = 2.5,
                  min_dist_y = 1.4,
-                 x_accel_low = -1.0,
-                 y_accel_low = -1.0,
-                 x_accel_high = 1.0,
-                 y_accel_high = 1.0,
-                 x_boundary_low = -10.0,
-                 y_boundary_low = -10.0,
-                 x_boundary_high = 10.0,
-                 y_boundary_high = 10.0,
-                 x_v_low = -10.0,
-                 y_v_low = -10.0,
-                 x_v_high = 10.0,
-                 y_v_high = 10.0,
-                 mean_x = 0.0,
-                 mean_y = 0.0,
-                 cov_x = 0.1,
-                 cov_y = 0.01,
                  car_init_x = 35.0,
                  car_init_y = 0.0,
-                 mean_sensor_noise = 0.0,
-                 cov_sensor_noise = 0.1,
                  action_only = True,
                  **kwargs):
         #Constant hyper-params -- set by user
@@ -60,26 +41,8 @@ class ExampleAVSimulator(Simulator):
         self.c_d_cmf = d_cmf
         self.c_d_max = d_max
         self.c_min_dist = np.array([min_dist_x, min_dist_y])
-        self.c_x_accel_low = x_accel_low
-        self.c_y_accel_low = y_accel_low
-        self.c_x_accel_high = x_accel_high
-        self.c_y_accel_high = y_accel_high
-        self.c_x_boundary_low = x_boundary_low
-        self.c_y_boundary_low = y_boundary_low
-        self.c_x_boundary_high = x_boundary_high
-        self.c_y_boundary_high = y_boundary_high
-        self.c_x_v_low = x_v_low
-        self.c_y_v_low = y_v_low
-        self.c_x_v_high = x_v_high
-        self.c_y_v_high = y_v_high
-        self.c_mean_x = mean_x
-        self.c_mean_y = mean_y
-        self.c_cov_x = cov_x
-        self.c_cov_y = cov_y
         self.c_car_init_x = car_init_x
         self.c_car_init_y = car_init_y
-        self.c_mean_sensor_noise = mean_sensor_noise
-        self.c_cov_sensor_noise = cov_sensor_noise
         self.action_only = action_only
 
         #These are set by reset, not the user
