@@ -53,7 +53,7 @@ elements, like on the beams of a LIDAR sensor. The simulator must be able to res
 detect if a goal state had been reached. The simulator state can be used, but is not neccessary. 
 Interactive simulations are optional as well.
 
-.. _section 2.1: interactive-simulations_
+.. _interactive-simulations:
 
 2.1 Interactive Simulations
 ---------------------------
@@ -109,6 +109,8 @@ Our example simulator will control a modified version of the Intelligent Driver 
 * **car\_init\_y**: Specifies the initial y-position of the SUT
 * **action\_only**: A boolean value specifying whether the simulation state is unobserved, so only the previous action will be used as input to the policy. Only set to False if you have an interactive simulatior with an observable state, and you would like to pass that state as part of the input to the policy (see `section 2.1`_)
 * **kwargs**: Any keyword arguement not listed here. In particular, ``max_path_length`` should be pased to the base Simulator as one of the **kwargs.
+
+.. _section 2.1: interactive-simulations_
 
 In addition, there are a number of member variables that need to be initialized. The code is below:
 ::
