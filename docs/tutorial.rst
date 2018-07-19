@@ -302,6 +302,8 @@ These functions handle the backend simulation of the toy problem and the SUT. No
         return -1, np.array(self._info)
 
 2.5 The ``step`` function:
+--------------------------
+
 If a simulation is interactive, the ``step`` function should interact with it at each timestep. The functions takes as input the current action. If the action is interactive and the simulation state is being used, return the state. Otherwise, return ``None``. If the simulation is non-interactive, other per-step actions can still be put here if neccessary - this function is called at each timestep either way. However, there is nothing to do at each step in this case, so the function will just return ``None``.
 
 ::
@@ -321,10 +323,100 @@ If a simulation is interactive, the ``step`` function should interact with it at
         return None
 
 2.6 The ``reset`` function:
+---------------------------
+
+The reset function should return the simulation to a state where it can accept the next sequence of actions. In some cases this may mean explcitily reseting the simulation parameters, like SUT location or simulation time. It could also mean opening and initializing a new instance of the simulator (in which case the ``simulate`` function should close the current instance). Your implementation of the ``reset`` function may be something else entirely, this is highly dependent on how your simulator functions. The method takes the initial state as an input, and returns the state of the simulator after the reset actions are taken. If the simulation state is not accessable, just return the initial condition parameters that were passed in.
+
+::
+    def reset(self, s_0):
+        """
+        Resets the state of the environment, returning an initial observation.
+        Outputs
+        -------
+        observation : the initial observation of the space. (Initial reward is assumed to be 0.)
+        """
+
+        # initialize variables
+        self._info = []
+        self._step = 0
+        self._is_terminal = False
+        self.init_conditions = s_0
+        self._first_step = True
+
+        # Get v_des if it is sampled from a range
+        v_des = self.init_conditions[3*self.c_num_peds]
+
+        # initialize SUT location
+        car_init_x = self.init_conditions[3*self.c_num_peds + 1]
+        self._car = np.array([v_des, 0.0, car_init_x, self.c_car_init_y])
+
+        # zero out the first SUT acceleration
+        self._car_accel = np.zeros((2))
+
+        # initialize pedestrian locations and velocities
+        pos = self.init_conditions[0:2*self.c_num_peds]
+        self.x = pos[0:self.c_num_peds*2:2]
+        self.y = pos[1:self.c_num_peds*2:2]
+        v_start = self.init_conditions[2*self.c_num_peds:3*self.c_num_peds]
+        self._peds[0:self.c_num_peds, 0] = np.zeros((self.c_num_peds))
+        self._peds[0:self.c_num_peds, 1] = v_start
+        self._peds[0:self.c_num_peds, 2] = self.x
+        self._peds[0:self.c_num_peds, 3] = self.y
+
+        # Calculate the relative position measurements
+        self._measurements = self._peds - self._car
+        self._env_obs = self._measurements
+        self._car_obs = self._measurements
+
+        # return the initial simulation state
+        if self.action_only:
+            return self.init_conditions
+        else:
+            self._car = np.array([self.c_v_des, 0.0, self.c_car_init_x, self.c_car_init_y])
+            self._car_accel = np.zeros((2))
+            self._peds[:, 0:4] = np.array([0.0, 1.0, -0.5, -4.0])
+            self._measurements = self._peds - self._car
+            self._env_obs = self._measurements
+            self._car_obs = self._measurements
+            return np.ndarray.flatten(self._measurements)
 
 2.7 The ``get_reward_info`` function:
+-------------------------------------
+
+It is likely that your reward function (see XXX) will need some information from the simulator. The reward function will be passed whatever information is returned from this function. For the example, the reward function augments the "no crash" case with the distance between the SUT and the nearest pedestrian. To do this, both the car and pedestrian locations are returned. In addition, boolean values indicating whether a crash has been found or if the horizon has been reached are returned.
+
+::
+    def get_reward_info(self):
+        """
+        returns any info needed by the reward function to calculate the current reward
+        """
+
+        return {"peds": self._peds,
+                "car": self._car,
+                "is_goal": self.is_goal(),
+                "is_terminal": self._is_terminal}
 
 2.8 The ``is_goal`` function:
+-----------------------------
+
+This function returns a boolean value indicating if the current state is in the goal set. In the example, this is True if the pedestrian is hit by the car. Therefore this function checks for any pedestrians in the hitbox of the SUT.
+
+::
+    def is_goal(self):
+        """
+        returns whether the current state is in the goal set
+        :return: boolean, true if current state is in goal set.
+        """
+        # calculate the relative distances between the pedestrians and the car
+        dist = self._peds[:, 2:4] - self._car[2:4]
+
+        # return True if any relative distance is within the SUT's hitbox
+        if (np.any(np.all(np.less_equal(abs(dist), self.c_min_dist), axis=1))):
+            return True
+
+        return False
 
 2.9 The ``log`` function (Optional):
+------------------------------------
+
 
