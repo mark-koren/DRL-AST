@@ -176,7 +176,6 @@ In addition, there are a number of member variables that need to be initialized.
 ------------------------------
 
 The simulate function runs a simulation using previously generated actions from the policy to control the stochasticity. The simulate function accepts a list of actions and an intitial state. It should run the simulation, then return the timestep that the goal state was achieved, or a -1 if the horizon was reached first. In addition, this function should return any simulation info needed for post-analysis. To do this, first add the following code to the file to handle the simulation aspect:
-
 :: 
     def sensors(self, car, peds, noise):
 
@@ -245,7 +244,6 @@ The simulate function runs a simulation using previously generated actions from 
         self._env_obs = self._peds - self._car
 
 These functions handle the backend simulation of the toy problem and the SUT. Now we implement the ``simulate`` function, checking to be sure that the horizon wasn't reached:
-
 ::
     def simulate(self, actions, s_0):
         """
@@ -305,7 +303,6 @@ These functions handle the backend simulation of the toy problem and the SUT. No
 --------------------------
 
 If a simulation is interactive, the ``step`` function should interact with it at each timestep. The functions takes as input the current action. If the action is interactive and the simulation state is being used, return the state. Otherwise, return ``None``. If the simulation is non-interactive, other per-step actions can still be put here if neccessary - this function is called at each timestep either way. However, there is nothing to do at each step in this case, so the function will just return ``None``.
-
 ::
     def step(self, action):
         """
@@ -326,7 +323,6 @@ If a simulation is interactive, the ``step`` function should interact with it at
 ---------------------------
 
 The reset function should return the simulation to a state where it can accept the next sequence of actions. In some cases this may mean explcitily reseting the simulation parameters, like SUT location or simulation time. It could also mean opening and initializing a new instance of the simulator (in which case the ``simulate`` function should close the current instance). Your implementation of the ``reset`` function may be something else entirely, this is highly dependent on how your simulator functions. The method takes the initial state as an input, and returns the state of the simulator after the reset actions are taken. If the simulation state is not accessable, just return the initial condition parameters that were passed in.
-
 ::
     def reset(self, s_0):
         """
@@ -384,7 +380,6 @@ The reset function should return the simulation to a state where it can accept t
 -------------------------------------
 
 It is likely that your reward function (see XXX) will need some information from the simulator. The reward function will be passed whatever information is returned from this function. For the example, the reward function augments the "no crash" case with the distance between the SUT and the nearest pedestrian. To do this, both the car and pedestrian locations are returned. In addition, boolean values indicating whether a crash has been found or if the horizon has been reached are returned.
-
 ::
     def get_reward_info(self):
         """
@@ -400,7 +395,6 @@ It is likely that your reward function (see XXX) will need some information from
 -----------------------------
 
 This function returns a boolean value indicating if the current state is in the goal set. In the example, this is True if the pedestrian is hit by the car. Therefore this function checks for any pedestrians in the hitbox of the SUT.
-
 ::
     def is_goal(self):
         """
@@ -420,7 +414,6 @@ This function returns a boolean value indicating if the current state is in the 
 ------------------------------------
 
 The log function is a way to store variables from the simulator for later access. In the example, some simulation state information is appended to a list at every timestep.
-
 ::
     def log(self):
         # Create a cache of step specific variables for post-simulation analysis
