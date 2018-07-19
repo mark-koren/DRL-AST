@@ -84,6 +84,7 @@ Start by creating a file named ``example_av_simulator.py`` in the ``simulators``
 	class ExampleAVSimulator(Simulator):
 
 The base generator accepts one input:
+
 * **max_path_length**: The horizon of the simulation, in number of timesteps
 
 A child of the Simulator class is required to define the following five functions: ``simulate``, ``step``, ``reset``, ``get_reward_info``, and ``is_goal``. An optional ``log`` function may also be implemented. 
