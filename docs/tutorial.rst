@@ -53,6 +53,8 @@ elements, like on the beams of a LIDAR sensor. The simulator must be able to res
 detect if a goal state had been reached. The simulator state can be used, but is not neccessary. 
 Interactive simulations are optional as well.
 
+.. _section 2.1: interactive-simulations_
+
 2.1 Interactive Simulations
 ---------------------------
 
@@ -98,3 +100,5 @@ Our example simulator will control a modified version of the Intelligent Driver 
 * **car\_init\_x**: Specifies the initial x-position of the SUT
 * **car\_init\_y**: Specifies the initial y-position of the SUT
 * **action\_only**: A boolean value specifying whether the simulation state is unobserved, so only the previous action will be used as input to the policy. Only set to False if you have an interactive simulatior with an observable state, and you would like to pass that state as part of the input to the policy (see `section 2.1`_)
+
+
