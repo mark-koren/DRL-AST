@@ -68,8 +68,8 @@ the execution. Neither variant is inherently better, so use whatever is appropri
 2.2 Inheriting the Base Simulator
 ---------------------------------
 
-Start by creating a file named ''example_av_simulator.py'' in the ''simulators'' folder. Create a class titled
-''ExampleAVSimulator'', which inherits from ''Simulator''.
+Start by creating a file named ``example_av_simulator.py`` in the ``simulators`` folder. Create a class titled
+``ExampleAVSimulator``, which inherits from ``Simulator``.
 
 ::
 
@@ -82,6 +82,14 @@ Start by creating a file named ''example_av_simulator.py'' in the ''simulators''
 
 	#Define the class
 	class ExampleAVSimulator(Simulator):
+
+The base generator accepts one input:
+* **max_path_length**: The horizon of the simulation, in number of timesteps
+
+A child of the Simulator class is required to define the following five functions: ``simulate``, ``step``, ``reset``, ``get_reward_info``, and ``is\_goal``. An optional ``log`` function may also be implemented. 
+
+2.3 Initializing the Example Simulator
+--------------------------------------
 
 Our example simulator will control a modified version of the Intelligent Driver Model (IDM) as our SUT, while adding sensor noise and filtering it out with an alpha-beta tracker. Initial simulation conditions are needed here as well. Because of all thise, the Simulator accepts a number of inputs:
 
@@ -100,5 +108,69 @@ Our example simulator will control a modified version of the Intelligent Driver 
 * **car\_init\_x**: Specifies the initial x-position of the SUT
 * **car\_init\_y**: Specifies the initial y-position of the SUT
 * **action\_only**: A boolean value specifying whether the simulation state is unobserved, so only the previous action will be used as input to the policy. Only set to False if you have an interactive simulatior with an observable state, and you would like to pass that state as part of the input to the policy (see `section 2.1`_)
+* **kwargs**: Any keyword arguement not listed here. In particular, ``max_path_length`` should be pased to the base Simulator as one of the **kwargs.
+
+In addition, there are a number of member variables that need to be initialized. The code is below:
+::
+    def __init__(self,
+                 ego = None,
+                 num_peds = 1,
+                 dt = 0.1,
+                 alpha = 0.85,
+                 beta = 0.005,
+                 v_des = 11.17,
+                 delta = 4.0,
+                 t_headway = 1.5,
+                 a_max = 3.0,
+                 s_min = 4.0,
+                 d_cmf = 2.0,
+                 d_max = 9.0,
+                 min_dist_x = 2.5,
+                 min_dist_y = 1.4,
+                 car_init_x = 35.0,
+                 car_init_y = 0.0,
+                 action_only = True,
+                 **kwargs):
+        #Constant hyper-params -- set by user
+        self.c_num_peds = num_peds
+        self.c_dt = dt
+        self.c_alpha = alpha
+        self.c_beta = beta
+        self.c_v_des = v_des
+        self.c_delta = delta
+        self.c_t_headway = t_headway
+        self.c_a_max = a_max
+        self.c_s_min = s_min
+        self.c_d_cmf = d_cmf
+        self.c_d_max = d_max
+        self.c_min_dist = np.array([min_dist_x, min_dist_y])
+        self.c_car_init_x = car_init_x
+        self.c_car_init_y = car_init_y
+        self.action_only = action_only
+
+        #These are set by reset, not the user
+        self._car = np.zeros((4))
+        self._car_accel = np.zeros((2))
+        self._peds = np.zeros((self.c_num_peds, 4))
+        self._measurements = np.zeros((self.c_num_peds, 4))
+        self._car_obs = np.zeros((self.c_num_peds, 4))
+        self._env_obs = np.zeros((self.c_num_peds, 4))
+        self._done = False
+        self._reward = 0.0
+        self._info = []
+        self._step = 0
+        self._action = None
+        self._first_step = True
+        self.directions = np.random.randint(2, size=self.c_num_peds) * 2 - 1
+        self.y = np.random.rand(self.c_num_peds) * 14 - 5
+        self.x = np.random.rand(self.c_num_peds) * 4 - 2
+        self.low_start_bounds = [-1.0, -4.25, -1.0, 5.0, 0.0, -6.0, 0.0, 5.0]
+        self.high_start_bounds = [0.0, -3.75, 0.0, 9.0, 1.0, -2.0, 1.0, 9.0]
+        self.v_start = [1.0, -1.0, 1.0, -1.0]
+        self._state = None
+
+        #initialize the base Simulator
+        super().__init__(**kwargs)
 
 
+2.4
