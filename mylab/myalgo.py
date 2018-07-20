@@ -30,17 +30,19 @@ class GA(BatchPolopt):
             step_size=0.01,
             pop_size = 10,
             elites = 2,
+            mutation = 0.9,
             fit_f = "max",
             **kwargs):
         if optimizer is None:
             if optimizer_args is None:
                 optimizer_args = dict()
-            optimizer = PenaltyLbfgsOptimizer(**optimizer_args)
+            optimizer = PenaltyLbfgsOptimizer(name="name",**optimizer_args)
         self.optimizer = optimizer
         self.step_size = step_size
         self.pop_size = pop_size
         self.elites = elites
         self.fit_f = fit_f
+        self.mutation = mutation
         super(GA, self).__init__(**kwargs)
 
     @overrides
@@ -130,7 +132,8 @@ class GA(BatchPolopt):
                                 params[j] = tf.add(params[j],
                                                    tf.random_normal(
                                                        shape = tf.shape(params[j]),
-                                                       seed = self.seeds[i,p]
+                                                       seed = self.seeds[i,p],
+                                                       stddev=1.0 * (self.mutation)**i
                                                    ))
 
                         logger.log("Obtaining samples...")

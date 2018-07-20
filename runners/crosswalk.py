@@ -13,7 +13,7 @@ from rllab.envs.normalized_env import normalize
 from rllab.sampler import parallel_sampler
 from rllab.sampler.stateful_pool import singleton_pool
 import rllab.misc.logger as logger
-
+from mylab.gaussian_deep_lstm_policy import GaussianDeepLSTMPolicy
 from mylab.crosswalk_env_2 import CrosswalkEnv
 from mylab.crosswalk_sensor_env_2 import CrosswalkSensorEnv
 from mylab.myalgo import GA
@@ -155,10 +155,18 @@ elif args.policy == "GRU":
     policy = GaussianGRUPolicy(name='lstm_policy',
                                 env_spec=env.spec,
                                 hidden_dim=args.hidden_dim)
-else:
+elif args.policy == "MLP":
     policy = GaussianMLPPolicy(name='mlp_policy',
                                env_spec=env.spec,
                                hidden_sizes=(512, 256, 128, 64, 32))
+else:
+    policy = GaussianDeepLSTMPolicy(name = 'deep_lstm_policy',
+                                    env_spec=env.spec,
+                                    hidden_dim=args.hidden_dim,
+                                    hidden_lstm_dim=256,
+                                    use_peepholes=args.use_peepholes,
+                                    hidden_sizes=(256, 128, 64, 32)
+                                    )
 # policy = DeterministicMLPPolicy(name='mlp_policy',
 #                                 env_spec=env.spec,
 #                                 hidden_sizes=(512, 256, 128, 64, 32))
@@ -174,7 +182,21 @@ if args.optimizer == "CGO":
     optimizer = ConjugateGradientOptimizer(hvp_approach=FiniteDifferenceHvp(base_eps=1e-5))
 else:
     optimizer = PenaltyLbfgsOptimizer(name="LBFGS")
-algo = GA(
+# algo = GA(
+#     env=env,
+#     policy=policy,
+#     baseline=baseline,
+#     batch_size=args.batch_size,
+#     step_size=args.step_size,
+#     gae_lambda=0.999,
+#     n_itr=args.iters,
+#     store_paths=True,
+#     optimizer=optimizer,
+#     pop_size=args.pop_size,
+#     elites=args.elites,
+#     fit_f=args.fit_f
+# )
+algo = TRPO(
     env=env,
     policy=policy,
     baseline=baseline,
@@ -184,9 +206,6 @@ algo = GA(
     n_itr=args.iters,
     store_paths=True,
     optimizer=optimizer,
-    pop_size=args.pop_size,
-    elites=args.elites,
-    fit_f=args.fit_f
 )
 saver = tf.train.Saver(save_relative_paths=True)
 with tf.Session() as sess:
