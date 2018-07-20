@@ -2,7 +2,7 @@ Tutorial
 ******************
 .. _introduction:
 
-1. Introduction
+1 Introduction
 ===============
 
 This tutorial is intended for readers to learn how to use this package with their own simulator.
@@ -11,7 +11,7 @@ package before proceeding.
 
 .. _about-ast:
 
-1.1. About AST
+1.1 About AST
 -----------------
 Adaptive Stress Testing is a way of finding flaws in an autonomous agent. For any non-trivial problem, 
 searching the space of a stochastic simulation is intractable, and grid searches do not perform well.
@@ -28,7 +28,7 @@ define the **Observation Space** and the **Action Space**
 
 .. _about-this-tutorial:
 
-1.2. About this tutorial
+1.2 About this tutorial
 ------------------------
 
 In this tutorial, we will create a simple ring road network, which in the
@@ -449,3 +449,20 @@ The log function is a way to store variables from the simulator for later access
         self._info.append(cache)
         self._step += 1
 
+3 Creating a Reward Function
+============================
+
+4 Creating a Runner
+===================
+
+5 Creating the Spaces
+=====================
+
+5.1 The Action Space
+--------------------
+
+5.2 The Observation Space
+-------------------------
+
+6 Running the Example
+=====================
