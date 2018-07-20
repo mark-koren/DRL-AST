@@ -1,5 +1,6 @@
 Tutorial
 ******************
+.. _introduction:
 
 1. Introduction
 ===============
@@ -7,6 +8,8 @@ Tutorial
 This tutorial is intended for readers to learn how to use this package with their own simulator.
 Matery of the underlying theory would be helpful, but is not needed for installation. Please install 
 package before proceeding.
+
+.. _about-ast:
 
 1.1. About AST
 -----------------
@@ -16,13 +19,14 @@ By modeling the search as a Markov Decision Process, we can use reinforcement le
 most probable failure. AST treats the simulator as a black box, and only needs access in a few specific
 ways. To interface a simulator to the AST packages, a few things will be needed:
 
-- A **Simulator** is a wraper that exposes the simulation software to this package. See the Simulator
+* A **Simulator** is a wraper that exposes the simulation software to this package. See the Simulator
 section for details on Interactive vs. Non-Interactive Simulators
-- A **Reward** function dictates the optimization goals of the algorithm. 
-- A **Runner** collects all of the run options and starts the method.
-- **Space** objects give information on the size and limits of a space. This will be used to
+* A **Reward** function dictates the optimization goals of the algorithm. 
+* A **Runner** collects all of the run options and starts the method.
+* **Space** objects give information on the size and limits of a space. This will be used to
 define the **Observation Space** and the **Action Space**
 
+.. _about-this-tutorial:
 
 1.2. About this tutorial
 ------------------------
@@ -65,6 +69,8 @@ to the AST solver. Passing the simulation state to the solver may reduce the num
 converge to a solution. However, pausing the simulation at each step may introduce overhead which slows
 the execution. Neither variant is inherently better, so use whatever is appropriate for your project.
 
+.. _inheriting-the-base-simulator:
+
 2.2 Inheriting the Base Simulator
 ---------------------------------
 
@@ -88,6 +94,8 @@ The base generator accepts one input:
 * **max_path_length**: The horizon of the simulation, in number of timesteps
 
 A child of the Simulator class is required to define the following five functions: ``simulate``, ``step``, ``reset``, ``get_reward_info``, and ``is_goal``. An optional ``log`` function may also be implemented. 
+
+.. _initializing-the-example-simulator:
 
 2.3 Initializing the Example Simulator
 --------------------------------------
@@ -174,6 +182,8 @@ In addition, there are a number of member variables that need to be initialized.
 
         #initialize the base Simulator
         super().__init__(**kwargs)
+
+.. _the-simulate-function:
 
 2.4 The ``simulate`` function:
 ------------------------------
@@ -302,6 +312,8 @@ These functions handle the backend simulation of the toy problem and the SUT. No
         self._is_terminal = True
         return -1, np.array(self._info)
 
+.. _the-step-function:
+
 2.5 The ``step`` function:
 --------------------------
 
@@ -321,6 +333,8 @@ If a simulation is interactive, the ``step`` function should interact with it at
 
         """
         return None
+
+.. _the-reset-function:
 
 2.6 The ``reset`` function:
 ---------------------------
@@ -379,6 +393,8 @@ The reset function should return the simulation to a state where it can accept t
             self._car_obs = self._measurements
             return np.ndarray.flatten(self._measurements)
 
+.. _the-get-reward-info-function:
+
 2.7 The ``get_reward_info`` function:
 -------------------------------------
 
@@ -393,6 +409,8 @@ It is likely that your reward function (see XXX) will need some information from
                 "car": self._car,
                 "is_goal": self.is_goal(),
                 "is_terminal": self._is_terminal}
+
+.. _the-is-goal-function:
 
 2.8 The ``is_goal`` function:
 -----------------------------
@@ -412,6 +430,8 @@ This function returns a boolean value indicating if the current state is in the 
             return True
 
         return False
+
+.. _the-log-function-optional:
 
 2.9 The ``log`` function (Optional):
 ------------------------------------
