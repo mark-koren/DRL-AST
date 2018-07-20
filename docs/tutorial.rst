@@ -473,6 +473,10 @@ Start by creating a file named ``example_av_reward.py`` in the ``rewards`` folde
 
 The base class does not take an inputs, and there is only one required function - ``give_reward``.
 
+3.3 The ''give_reward'' Function
+--------------------------------
+
+
 
 4 Creating a Runner
 ===================
