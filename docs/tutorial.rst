@@ -461,7 +461,7 @@ This section explains how to create a function that dictates the reward at each 
 
 As an example of reinforcement learning, and the importance of the reward function, consider the famous childrens game "The Hat Game." Common at summer camps, the game usually starts with a counselor holding a hat in his hands, telling the kids he is about to teach them a new game. He will say "Ok, ready everyone....? I can play the hat game," proceed to do a bunch of random things with the hat, and then say "how about you?" He will then pass the hat to a camper, who repeats almost exactly everything the counselor does, but is told "no, you didn't play the hat game." Another counselor will take the hat, say the words, do something completly different with it, and the game is on. The trick is actually the word "OK" - so long as you say that magic word, you have played the hat game, even if you have no hat.
 
-How does this relate to reward shaping? In this case, the children are the policy. They are taking stochastic actions, trying to learn how to play the hat game. The key to the game being fun is that the children are pretrained to pay attentian to meaningless words, and to mimic the hat motions. However, after enough trials (and it can take a long time), most of them will pick up the pattern and attention will shift to "OK." In the vanilla game, there are two rewards. "Yes, you played the hat game" can be considered positive, and "No, you didn't play the hat game" can be considered negative, or just zero. By changing this reward, we could make the game difficulty radically different. Imagine if 10 kids tried the game, and all they got was a binary response on if at least one of them played the game. This would be much harder to pick up on! This is an example of a sparse reward function, or one that only rarely gives rewards, such as at the end of a trajectory. On the other hand, what if the children recieved feedback after every single word or motion on if they had played the hat game during that trial yet. The game would be much easier! These are examples of how different reward functions can make achieving the same policy easier or harder.   
+How does this relate to reward shaping? In this case, the children are the policy. They are taking stochastic actions, trying to learn how to play the hat game. The key to the game being fun is that the children are pretrained to pay attentian to meaningless words, and to mimic the hat motions. However, after enough trials (and it can take a long time), most of them will pick up the pattern and attention will shift to "OK." In the vanilla game, there are two rewards. "Yes, you played the hat game" can be considered positive, and "No, you didn't play the hat game" can be considered negative, or just zero. By changing this reward, we could make the game difficulty radically different. Imagine if 10 kids tried the game, and all they got was a binary response on if at least one of them played the game. This would be much harder to pick up on! This is an example of a sparse reward function, or one that only rarely gives rewards, such as at the end of a trajectory. On the other hand, what if the children recieved feedback after every single word or motion on if they had played the hat game during that trial yet. The game would be much easier! These are examples of how different reward functions can make achieving the same policy easier or harder. 
 
 3.2 Inheriting the Base Reward Function
 ---------------------------------------
@@ -480,6 +480,37 @@ Start by creating a file named ``example_av_reward.py`` in the ``rewards`` folde
 
 The base class does not take an inputs, and there is only one required function - ``give_reward``.
 
+3.3 Initializing the Example Reward Function
+--------------------------------------------
+
+The reward function will be calculating some rewards based on the probability of certain actions. We have assumed the means action is the 0 vector, but we still need to take the following inputs:
+
+* **num\_peds**: The number of pedestrians in the scenario
+* **cov\_x**: The covariance of the gaussian distribution used to model the x-acceleration of a pedestrian
+* **cov\_y**: The covariance of the gaussian distribution used to model the y-acceleration of a pedestrian
+* **cov\_sensor\_noise**: The covariance of the gaussian distribution used to model the noise on a sensor measurement in both the x and y directions (assumed equal)
+
+The code is below:
+::
+    def __init__(self,
+                 num_peds=1,
+                 cov_x=0.1,
+                 cov_y=0.01,
+                 cov_sensor_noise=0.1):
+
+        self.c_num_peds = num_peds
+        self.c_cov_x = cov_x
+        self.c_cov_y = cov_y
+        self.c_cov_sensor_noise = cov_sensor_noise
+        super().__init__()
+
+3.4 The ``give_reward`` function
+--------------------------------
+
+The give reward function takes
+Our example reward function is broken down into three cases, as specified in the paper. The three cases are as follows:
+
+1. There is a 
 
 4 Creating a Runner
 ===================
