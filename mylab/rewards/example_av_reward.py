@@ -2,15 +2,22 @@ from mylab.rewards.ast_reward import ASTReward
 import numpy as np
 import pdb
 
+
 class ExampleAVReward(ASTReward):
-    def __init__(self, num_peds = 1, cov_x = 0.1, cov_y = 0.01, cov_sensor_noise = 0.1):
+    def __init__(self,
+                 num_peds=1,
+                 cov_x=0.1,
+                 cov_y=0.01,
+                 cov_sensor_noise=0.1):
+
         self.c_num_peds = num_peds
         self.c_cov_x = cov_x
         self.c_cov_y = cov_y
         self.c_cov_sensor_noise = cov_sensor_noise
         super().__init__()
 
-    def give_reward(self, action, info):
+    def give_reward(self, action, **kwargs):
+        info = kwargs['info']
         peds = info["peds"]
         car = info["car"]
         is_goal = info["is_goal"]

@@ -19,8 +19,7 @@ By modeling the search as a Markov Decision Process, we can use reinforcement le
 most probable failure. AST treats the simulator as a black box, and only needs access in a few specific
 ways. To interface a simulator to the AST packages, a few things will be needed:
 
-* A **Simulator** is a wraper that exposes the simulation software to this package. See the Simulator
-section for details on Interactive vs. Non-Interactive Simulators
+* A **Simulator** is a wraper that exposes the simulation software to this package. See the Simulator section for details on Interactive vs. Non-Interactive Simulators
 * A **Reward** function dictates the optimization goals of the algorithm. 
 * A **Runner** collects all of the run options and starts the method.
 * **Space** objects give information on the size and limits of a space. This will be used to
