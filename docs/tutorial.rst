@@ -448,6 +448,10 @@ The log function is a way to store variables from the simulator for later access
         self._info.append(cache)
         self._step += 1
 
+.. rst-class:: html-toggle
+
+.. _creating-a-reward-function:
+
 3 Creating a Reward Function
 ============================
 
