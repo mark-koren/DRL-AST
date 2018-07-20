@@ -20,6 +20,7 @@ class ExampleAVReward(ASTReward):
         super().__init__()
 
     def give_reward(self, action, **kwargs):
+        # get the info from the simulator
         info = kwargs['info']
         peds = info["peds"]
         car = info["car"]
@@ -29,48 +30,33 @@ class ExampleAVReward(ASTReward):
 
         # update reward and done bool
 
-        if (is_goal):
+        if (is_goal): # We found a crash
             reward = 0
         elif (is_terminal):
-            reward = -10000 - 1000 * np.min(np.linalg.norm(dist, axis=1))
+            reward = -10000 - 1000 * np.min(np.linalg.norm(dist, axis=1)) # We reached
+            # the horizon with no crash
         else:
-            reward = -np.log(1 + self.mahalanobis_d(action))
+            reward = -np.log(1 + self.mahalanobis_d(action)) # No crash or horizon yet
 
         return reward
-        # if (np.any(np.all(np.less_equal(abs(dist), self.c_min_dist), axis=1))):
-        #     self._reward = 0
-        # elif (np.all(np.less_equal(dist[:, 0], -3.0)) or self._step > 50):
-        #     self._reward = -10000 - 1000 * np.min(np.linalg.norm(dist, axis=1))
-        # else:
-        #     self._reward = -np.log(1 + self.mahalanobis_d(self._action))
 
-        # if np.any(dist) < -10.0 or self._step > 100:
-
-        #     self._done = True
 
     def mahalanobis_d(self, action):
-        # load G
-        # bundle = G(self._state)
-        # mean = G[0:2].T
-        # cov = np.array([[G[2], 0],[0, G[3]])
+        # Mean action is 0
         mean = np.zeros((6 * self.c_num_peds, 1))
-        # mean = np.array([[self.c_mean_x],[self.c_mean_y]])
-        # cov = np.array([[self.c_cov_x, 0], [0, self.c_cov_y]])
+        # Assemble the diagonal covariance matrix
         cov = np.zeros((self.c_num_peds, 6))
         cov[:, 0:6] = np.array([self.c_cov_x, self.c_cov_y,
                                 self.c_cov_sensor_noise, self.c_cov_sensor_noise,
                                 self.c_cov_sensor_noise, self.c_cov_sensor_noise])
         big_cov = np.diagflat(cov)
 
-        # inv_cov = np.linalg.inv(cov)
-        # big_cov_diag = np.zeros((2*self.c_num_peds))
-        # big_cov_diag[::2] = inv_cov[0,0]
-        # big_cov_diag[1::2] = inv_cov[1, 1]
-        # big_cov = np.diag(big_cov_diag)
-
+        # subtract the mean from our actions
         dif = np.copy(action)
         dif[::2] -= mean[0, 0]
         dif[1::2] -= mean[1, 0]
+
+        # calculate the Mahalanobis distance
         dist = np.dot(np.dot(dif.T, np.linalg.inv(big_cov)), dif)
-        # print(dist)
+
         return np.sqrt(dist)

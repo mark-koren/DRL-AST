@@ -453,6 +453,8 @@ The log function is a way to store variables from the simulator for later access
 
 This section explains how to create a function that dictates the reward at each timestep of a simulation. AST formulates the problem of searching the space of possible variations of a stochastic simulation as an MDP so that modern-day reinforcement learning (RL) techniques can be used. When optimizing a policy using RL, the reward function is of the utmost importance, as it determines how the agent will learn. Changing the reward function to achieve the desired policy is known as reward shaping. 
 
+.. _reward-shaping:
+
 3.1 Reward Shaping
 ------------------
 
@@ -507,10 +509,66 @@ The code is below:
 3.4 The ``give_reward`` function
 --------------------------------
 
-The give reward function takes
 Our example reward function is broken down into three cases, as specified in the paper. The three cases are as follows:
 
-1. There is a 
+1. There is a crash at the current timestep
+2. The horizon of the simulation is reached, with no crash
+3. The current step did not find a crash or reach the horizon
+
+The respective reward for each case is as follows:
+
+1. R = 0
+2. R = -1E5 - 1E4 * {The distance between the car and the closest pedestrian}
+3. R = -log(1 + {likelihood of the actions take})
+
+For case 2, we use the distance between the car and the closest pedestrian as a heurisitc to increase convergence speed. In the early trials, this teaches pedestrians to end closer to the car, which makes it easier to find crash trajectories (see `section 3.1`_). For case 3, using the negative log-likelihood allows us to sum the rewards to find a value that is proportional to the probability of the trajectory. As a stand in for the probability of an action, we use the Mahalanobis distance, a multi-dimensional generalization of distance from the mean. Add the following helper function to your file:
+::
+    def mahalanobis_d(self, action):
+        # Mean action is 0
+        mean = np.zeros((6 * self.c_num_peds, 1))
+        # Assemble the diagonal covariance matrix
+        cov = np.zeros((self.c_num_peds, 6))
+        cov[:, 0:6] = np.array([self.c_cov_x, self.c_cov_y,
+                                self.c_cov_sensor_noise, self.c_cov_sensor_noise,
+                                self.c_cov_sensor_noise, self.c_cov_sensor_noise])
+        big_cov = np.diagflat(cov)
+
+        # subtract the mean from our actions
+        dif = np.copy(action)
+        dif[::2] -= mean[0, 0]
+        dif[1::2] -= mean[1, 0]
+        
+        # calculate the Mahalanobis distance
+        dist = np.dot(np.dot(dif.T, np.linalg.inv(big_cov)), dif)
+
+        return np.sqrt(dist)
+
+Now we are ready to calculate the reward. The ``give_reward`` function takes in an action, as well as the info bundle that was returned from the ``get_reward_info`` function in the ``ExampleAVSimulator`` (see `section 2.7`_). The code is as follows:
+::
+    def give_reward(self, action, **kwargs):
+        # get the info from the simulator
+        info = kwargs['info']
+        peds = info["peds"]
+        car = info["car"]
+        is_goal = info["is_goal"]
+        is_terminal = info["is_terminal"]
+        dist = peds[:, 2:4] - car[2:4]
+
+        # update reward and done bool
+
+        if (is_goal): # We found a crash
+            reward = 0
+        elif (is_terminal):
+            reward = -10000 - 1000 * np.min(np.linalg.norm(dist, axis=1)) # We reached
+            # the horizon with no crash
+        else:
+            reward = -np.log(1 + self.mahalanobis_d(action)) # No crash or horizon yet
+
+        return reward
+
+.. _section 3.1: reward-shaping_
+
+.. _section 2.7: the-get-reward-info-function_
 
 4 Creating a Runner
 ===================
