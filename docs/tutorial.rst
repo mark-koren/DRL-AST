@@ -451,6 +451,29 @@ The log function is a way to store variables from the simulator for later access
 3 Creating a Reward Function
 ============================
 
+This section explains how to create a function that dictates the reward at each timestep of a simulation. AST formulates the problem of searching the space of possible variations of a stochastic simulation as an MDP so that modern-day reinforcement learning (RL) techniques can be used. When optimizing a policy using RL, the reward function is of the utmost importance, as it determines how the agent will learn. Changing the reward function to achieve the desired policy is known as reward shaping. 
+
+3.1 Reward Shaping
+------------------
+
+3.2 Inheriting the Base Reward Function
+---------------------------------------
+
+Start by creating a file named ``example_av_reward.py`` in the ``rewards`` folder. Create a class title ``ExampleAVReward`` which inherits from ``ASTReward``:
+::
+	# import base class
+	from mylab.rewards.ast_reward import ASTReward
+
+	# useful packages for math and debugging
+	import numpy as np
+	import pdb
+
+	# Define the class, inherit from the base
+	class ExampleAVReward(ASTReward):
+
+The base class does not take an inputs, and there is only one required function - ``give_reward``.
+
+
 4 Creating a Runner
 ===================
 
