@@ -10,7 +10,6 @@ class ExampleAVSimulator(Simulator):
     """
     #Accept parameters for defining the behavior of the system under test[SUT]
     def __init__(self,
-                 ego = None,
                  num_peds = 1,
                  dt = 0.1,
                  alpha = 0.85,
