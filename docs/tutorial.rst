@@ -448,13 +448,28 @@ The log function is a way to store variables from the simulator for later access
         self._info.append(cache)
         self._step += 1
 
+.. rst-class:: html-toggle
+
+.. _creating-a-reward-function:
+
 3 Creating a Reward Function
 ============================
 
 This section explains how to create a function that dictates the reward at each timestep of a simulation. AST formulates the problem of searching the space of possible variations of a stochastic simulation as an MDP so that modern-day reinforcement learning (RL) techniques can be used. When optimizing a policy using RL, the reward function is of the utmost importance, as it determines how the agent will learn. Changing the reward function to achieve the desired policy is known as reward shaping. 
 
+.. _reward-shaping:
+
 3.1 Reward Shaping
 ------------------
+
+
+**SPOILER ALERT**: This section uses a famous summercamp game as an example. If you are planning on attending a children's summercamp in the near future I highly reccomend you skip this section, lest you ruin the counselors attempts at having fun at your expense. You have been warned.
+
+As an example of reinforcement learning, and the importance of the reward function, consider the famous childrens game "The Hat Game." Common at summer camps, the game usually starts with a counselor holding a hat in his hands, telling the kids he is about to teach them a new game. He will say "Ok, ready everyone....? I can play the hat game," proceed to do a bunch of random things with the hat, and then say "how about you?" He will then pass the hat to a camper, who repeats almost exactly everything the counselor does, but is told "no, you didn't play the hat game." Another counselor will take the hat, say the words, do something completly different with it, and the game is on. The trick is actually the word "OK" - so long as you say that magic word, you have played the hat game, even if you have no hat.
+
+How does this relate to reward shaping? In this case, the children are the policy. They are taking stochastic actions, trying to learn how to play the hat game. The key to the game being fun is that the children are pretrained to pay attentian to meaningless words, and to mimic the hat motions. However, after enough trials (and it can take a long time), most of them will pick up the pattern and attention will shift to "OK." In the vanilla game, there are two rewards. "Yes, you played the hat game" can be considered positive, and "No, you didn't play the hat game" can be considered negative, or just zero. By changing this reward, we could make the game difficulty radically different. Imagine if 10 kids tried the game, and all they got was a binary response on if at least one of them played the game. This would be much harder to pick up on! This is an example of a sparse reward function, or one that only rarely gives rewards, such as at the end of a trajectory. On the other hand, what if the children recieved feedback after every single word or motion on if they had played the hat game during that trial yet. The game would be much easier! These are examples of how different reward functions can make achieving the same policy easier or harder. 
+
+.. _inheriting-the-base-reward-function:
 
 3.2 Inheriting the Base Reward Function
 ---------------------------------------
@@ -473,10 +488,97 @@ Start by creating a file named ``example_av_reward.py`` in the ``rewards`` folde
 
 The base class does not take an inputs, and there is only one required function - ``give_reward``.
 
-3.3 The ''give_reward'' Function
+.. _initializing-the-example-reward-function:
+
+3.3 Initializing the Example Reward Function
+--------------------------------------------
+
+The reward function will be calculating some rewards based on the probability of certain actions. We have assumed the means action is the 0 vector, but we still need to take the following inputs:
+
+* **num\_peds**: The number of pedestrians in the scenario
+* **cov\_x**: The covariance of the gaussian distribution used to model the x-acceleration of a pedestrian
+* **cov\_y**: The covariance of the gaussian distribution used to model the y-acceleration of a pedestrian
+* **cov\_sensor\_noise**: The covariance of the gaussian distribution used to model the noise on a sensor measurement in both the x and y directions (assumed equal)
+
+The code is below:
+::
+    def __init__(self,
+                 num_peds=1,
+                 cov_x=0.1,
+                 cov_y=0.01,
+                 cov_sensor_noise=0.1):
+
+        self.c_num_peds = num_peds
+        self.c_cov_x = cov_x
+        self.c_cov_y = cov_y
+        self.c_cov_sensor_noise = cov_sensor_noise
+        super().__init__()
+
+.. _the-give-reward-function:
+
+3.4 The ``give_reward`` function
 --------------------------------
 
+Our example reward function is broken down into three cases, as specified in the paper. The three cases are as follows:
 
+1. There is a crash at the current timestep
+2. The horizon of the simulation is reached, with no crash
+3. The current step did not find a crash or reach the horizon
+
+The respective reward for each case is as follows:
+
+1. R = 0
+2. R = -1E5 - 1E4 * {The distance between the car and the closest pedestrian}
+3. R = -log(1 + {likelihood of the actions take})
+
+For case 2, we use the distance between the car and the closest pedestrian as a heurisitc to increase convergence speed. In the early trials, this teaches pedestrians to end closer to the car, which makes it easier to find crash trajectories (see `section 3.1`_). For case 3, using the negative log-likelihood allows us to sum the rewards to find a value that is proportional to the probability of the trajectory. As a stand in for the probability of an action, we use the Mahalanobis distance, a multi-dimensional generalization of distance from the mean. Add the following helper function to your file:
+::
+    def mahalanobis_d(self, action):
+        # Mean action is 0
+        mean = np.zeros((6 * self.c_num_peds, 1))
+        # Assemble the diagonal covariance matrix
+        cov = np.zeros((self.c_num_peds, 6))
+        cov[:, 0:6] = np.array([self.c_cov_x, self.c_cov_y,
+                                self.c_cov_sensor_noise, self.c_cov_sensor_noise,
+                                self.c_cov_sensor_noise, self.c_cov_sensor_noise])
+        big_cov = np.diagflat(cov)
+
+        # subtract the mean from our actions
+        dif = np.copy(action)
+        dif[::2] -= mean[0, 0]
+        dif[1::2] -= mean[1, 0]
+        
+        # calculate the Mahalanobis distance
+        dist = np.dot(np.dot(dif.T, np.linalg.inv(big_cov)), dif)
+
+        return np.sqrt(dist)
+
+Now we are ready to calculate the reward. The ``give_reward`` function takes in an action, as well as the info bundle that was returned from the ``get_reward_info`` function in the ``ExampleAVSimulator`` (see `section 2.7`_). The code is as follows:
+::
+    def give_reward(self, action, **kwargs):
+        # get the info from the simulator
+        info = kwargs['info']
+        peds = info["peds"]
+        car = info["car"]
+        is_goal = info["is_goal"]
+        is_terminal = info["is_terminal"]
+        dist = peds[:, 2:4] - car[2:4]
+
+        # update reward and done bool
+
+        if (is_goal): # We found a crash
+            reward = 0
+        elif (is_terminal):
+            reward = -10000 - 1000 * np.min(np.linalg.norm(dist, axis=1)) # We reached
+            # the horizon with no crash
+        else:
+            reward = -np.log(1 + self.mahalanobis_d(action)) # No crash or horizon yet
+
+        return reward
+
+.. _section 3.1: reward-shaping_
+
+.. _section 2.7: the-get-reward-info-function_
 
 4 Creating a Runner
 ===================
