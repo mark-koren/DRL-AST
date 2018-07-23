@@ -22,7 +22,7 @@ import argparse
 from save_trials import *
 import tensorflow as tf
 
-#Logger Params
+# Logger Params
 parser = argparse.ArgumentParser()
 parser.add_argument('--exp_name', type=str, default='crosswalk_exp')
 parser.add_argument('--tabular_log_file', type=str, default='tab.txt')
@@ -32,9 +32,9 @@ parser.add_argument('--snapshot_mode', type=str, default="gap")
 parser.add_argument('--snapshot_gap', type=int, default=10)
 parser.add_argument('--log_tabular_only', type=bool, default=False)
 parser.add_argument('--log_dir', type=str, default='.')
-parser.add_argument('--args_data', type=str, default=None)
 args = parser.parse_args()
 
+# Create the logger
 log_dir = args.log_dir
 
 tabular_log_file = osp.join(log_dir, args.tabular_log_file)

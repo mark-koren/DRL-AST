@@ -585,6 +585,85 @@ Now we are ready to calculate the reward. The ``give_reward`` function takes in 
 
 This section explains how to create a file to run the experiment we have been creating. This will use all of the example files we have created, and interface them with the a package for handling RL. The backend framework handling the policy definition and optimization is a package called RLLAB. The project is open-source, so if you would like to understand more about what RLLAB is doing please see the documentation here. 
 
+4.1 Setting Up the Runners
+--------------------------
+
+Create a file called ``example_runner.py`` in your working directory. Add the following code to handle all of the necessary imports:
+::
+	# Import the example classes
+	from mylab.simulators.example_av_simulator import ExampleAVSimulator
+	from mylab.rewards.example_av_reward import ExampleAVReward
+	from mylab.spaces.example_av_spaces import ExampleAVSpaces
+
+	# Import the AST classes
+	from mylab.envs.ast_env import ASTEnv
+	from mylab.ast_vectorized_sampler import ASTVectorizedSampler
+
+	# Import the necessary RLLAB classes
+	from sandbox.rocky.tf.algos.trpo import TRPO
+	from sandbox.rocky.tf.envs.base import TfEnv
+	from sandbox.rocky.tf.policies.gaussian_lstm_policy import GaussianLSTMPolicy
+	from sandbox.rocky.tf.optimizers.conjugate_gradient_optimizer import ConjugateGradientOptimizer, FiniteDifferenceHvp
+	from rllab.baselines.linear_feature_baseline import LinearFeatureBaseline
+	from rllab.envs.normalized_env import normalize
+	import rllab.misc.logger as logger
+
+	# Useful imports
+	import os.path as osp
+	import argparse
+	from save_trials import *
+	import tensorflow as tf
+
+4.2 Creating a Logger
+---------------------
+
+It is useful to get some feedback on how the policy training is going. To do that, an rllab ``logger`` is needed. To handle the parameters needed to specifiy the logger, an ``ArgumentParser`` is used, from the ``argparse`` package. This package allows command line arguments to be passed when executing a file, allowing easier automation of experiments. The ``argparse`` flags specified are listed here:
+
+* **--exp\_name**: Name of the experiment
+* **--tabular\_log\_file**: Name of the log file used to dump the tabular experiment logs
+* **--text\_log\_file**: Name of the log file used to dump the text based experiment logs
+* **--params\_log\_file**: Name of the log file used to write out the input parameters
+* **--snapshot\_mode**: How the snapshot recording frequency will be specified
+* **--snapshot_gap**: How many episodes to skip between writing out an episode snapshot
+* **--log_tabular_only**: A boolean specifiying if only the tabular experiment logs should be written
+* **--log-dir**: What directory the logger should write output to
+
+The code for defning these flags, as well as using them to create the logger, is below:
+::
+	# Logger Params
+	parser = argparse.ArgumentParser()
+	parser.add_argument('--exp_name', type=str, default='crosswalk_exp')
+	parser.add_argument('--tabular_log_file', type=str, default='tab.txt')
+	parser.add_argument('--text_log_file', type=str, default='tex.txt')
+	parser.add_argument('--params_log_file', type=str, default='args.txt')
+	parser.add_argument('--snapshot_mode', type=str, default="gap")
+	parser.add_argument('--snapshot_gap', type=int, default=10)
+	parser.add_argument('--log_tabular_only', type=bool, default=False)
+	parser.add_argument('--log_dir', type=str, default='.')
+	args = parser.parse_args()
+
+	# Create the logger
+	log_dir = args.log_dir
+
+	tabular_log_file = osp.join(log_dir, args.tabular_log_file)
+	text_log_file = osp.join(log_dir, args.text_log_file)
+	params_log_file = osp.join(log_dir, args.params_log_file)
+
+	logger.log_parameters_lite(params_log_file, args)
+	logger.add_text_output(text_log_file)
+	logger.add_tabular_output(tabular_log_file)
+	prev_snapshot_dir = logger.get_snapshot_dir()
+	prev_mode = logger.get_snapshot_mode()
+	logger.set_snapshot_dir(log_dir)
+	logger.set_snapshot_mode(args.snapshot_mode)
+	logger.set_snapshot_gap(args.snapshot_gap)
+	logger.set_log_tabular_only(args.log_tabular_only)
+	logger.push_prefix("[%s] " % args.exp_name)
+
+====== ======= ========
+Parameter   Flag   Meaning
+
+
 5 Creating the Spaces
 =====================
 
