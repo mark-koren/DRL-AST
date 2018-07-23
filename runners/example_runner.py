@@ -58,7 +58,7 @@ reward_function = ExampleAVReward()
 spaces = ExampleAVSpaces()
 
 # Create the environment
-env = TfEnv(normalize(ASTEnv(action_only=args.action_only,
+env = TfEnv(normalize(ASTEnv(action_only=True,
                              sample_init_state=False,
                              s_0=[-0.5, -4.0, 1.0, 11.17, -35.0],
                              simulator=sim,
@@ -69,8 +69,8 @@ env = TfEnv(normalize(ASTEnv(action_only=args.action_only,
 # Instantiate the RLLAB objects
 policy = GaussianLSTMPolicy(name='lstm_policy',
                             env_spec=env.spec,
-                            hidden_dim=args.hidden_dim,
-                            use_peepholes=args.use_peepholes)
+                            hidden_dim=256,
+                            use_peepholes=True)
 baseline = LinearFeatureBaseline(env_spec=env.spec)
 optimizer = ConjugateGradientOptimizer(hvp_approach=FiniteDifferenceHvp(base_eps=1e-5))
 sampler_cls = ASTVectorizedSampler
@@ -78,9 +78,9 @@ algo = TRPO(
     env=env,
     policy=policy,
     baseline=LinearFeatureBaseline(env_spec=env.spec),
-    batch_size=args.batch_size,
-    step_size=args.step_size,
-    n_itr=args.iters,
+    batch_size=4000,
+    step_size=0.1,
+    n_itr=101,
     store_paths=True,
     optimizer=ConjugateGradientOptimizer(hvp_approach=FiniteDifferenceHvp(base_eps=1e-5)),
     max_path_length=50,

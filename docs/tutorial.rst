@@ -580,12 +580,21 @@ Now we are ready to calculate the reward. The ``give_reward`` function takes in 
 
 .. _section 2.7: the-get-reward-info-function_
 
-4 Creating a Runner
+4 Creating the Spaces
+=====================
+
+4.1 The Action Space
+--------------------
+
+4.2 The Observation Space
+-------------------------
+
+5 Creating a Runner
 ===================
 
 This section explains how to create a file to run the experiment we have been creating. This will use all of the example files we have created, and interface them with the a package for handling RL. The backend framework handling the policy definition and optimization is a package called RLLAB. The project is open-source, so if you would like to understand more about what RLLAB is doing please see the documentation here. 
 
-4.1 Setting Up the Runners
+5.1 Setting Up the Runners
 --------------------------
 
 Create a file called ``example_runner.py`` in your working directory. Add the following code to handle all of the necessary imports:
@@ -614,7 +623,7 @@ Create a file called ``example_runner.py`` in your working directory. Add the fo
 	from save_trials import *
 	import tensorflow as tf
 
-4.2 Creating a Logger
+5.2 Creating a Logger
 ---------------------
 
 It is useful to get some feedback on how the policy training is going. To do that, an rllab ``logger`` is needed. To handle the parameters needed to specifiy the logger, an ``ArgumentParser`` is used, from the ``argparse`` package. This package allows command line arguments to be passed when executing a file, allowing easier automation of experiments. The ``argparse`` flags specified are listed here:
@@ -660,18 +669,114 @@ The code for defning these flags, as well as using them to create the logger, is
 	logger.set_log_tabular_only(args.log_tabular_only)
 	logger.push_prefix("[%s] " % args.exp_name)
 
-====== ======= ========
-Parameter   Flag   Meaning
+5.3 Specifying the Experiment
+-----------------------------
+
+All of the classes imported earlier will now be used to specify the experiment. The example classes were defined such that every keyword arguement had a default value. These can be changed by passing in a different value, but were left undefined here. The rllab components also have keyword arguements, many of which are specified here. These can be changed as well, but the rllab documentation should be consulted first. Add the following code to your runner file:
+::
+	# Instantiate the example classes
+	sim = ExampleAVSimulator()
+	reward_function = ExampleAVReward()
+	spaces = ExampleAVSpaces()
+
+	# Create the environment
+	env = TfEnv(normalize(ASTEnv(action_only=True,
+		                     sample_init_state=False,
+		                     s_0=[-0.5, -4.0, 1.0, 11.17, -35.0],
+		                     simulator=sim,
+		                     reward_function=reward_function,
+		                     spaces=spaces
+		                     )))
+
+	# Instantiate the RLLAB objects
+	policy = GaussianLSTMPolicy(name='lstm_policy',
+		                    env_spec=env.spec,
+		                    hidden_dim=256,
+		                    use_peepholes=True)
+	baseline = LinearFeatureBaseline(env_spec=env.spec)
+	optimizer = ConjugateGradientOptimizer(hvp_approach=FiniteDifferenceHvp(base_eps=1e-5))
+	sampler_cls = ASTVectorizedSampler
+	algo = TRPO(
+	    env=env,
+	    policy=policy,
+	    baseline=LinearFeatureBaseline(env_spec=env.spec),
+	    batch_size=4000,
+	    step_size=0.1,
+	    n_itr=101,
+	    store_paths=True,
+	    optimizer=ConjugateGradientOptimizer(hvp_approach=FiniteDifferenceHvp(base_eps=1e-5)),
+	    max_path_length=50,
+	    sampler_cls=sampler_cls,
+	    sampler_args={"sim": sim,
+		          "reward_function": reward_function})
+
+5.4 Running the Experiment
+--------------------------
+
+When executing the experiment, only two things need to be done. Create a new tensorflow session, and then pass that to the algorithm training function. However, recording values from the experiment is trickier, since that tensorflow session is needed to unpickle the data. There are ways to save the session for later data retrieval, which can be found in the tensorflow documentation. Here, the data will be processed while the session is still active using the save_trials function. Create a ``save_trials.py`` file and add the following code:
+::
+	import rllab
+	import joblib
+	import numpy as np
+	import sandbox
+	import pdb
+	import tensorflow as tf
 
 
-5 Creating the Spaces
-=====================
+	def save_trials(iters, path, header, sess, save_every_n = 100):
+	    #sess.run(tf.global_variables_initializer())
+	    for i in range(0, iters):
+		if (np.mod(i, save_every_n) != 0):
+		    continue
+		with tf.variable_scope('Loader' + str(i)):
+		    data = joblib.load(path + '/itr_' + str(i) + '.pkl')
+		    # pdb.set_trace()
+		    paths = data['paths']
 
-5.1 The Action Space
---------------------
+		    trials = np.array([]).reshape(0, paths[0]['env_infos']['info']['cache'].shape[1])
+		    crashes = np.array([]).reshape(0, paths[0]['env_infos']['info']['cache'].shape[1])
+		    for n, a_path in enumerate(paths):
+		        cache = a_path['env_infos']['info']['cache']
+		        # pdb.set_trace()
+		        cache[:, 0] = n
+		        trials = np.concatenate((trials, cache), axis=0)
+		        if cache[-1,-1] == 0.0:
+		            crashes = np.concatenate((crashes, cache), axis=0)
 
-5.2 The Observation Space
--------------------------
+		    np.savetxt(fname=path + '/trials_' + str(i) + '.csv',
+		               X=trials,
+		               delimiter=',',
+		               header=header)
+
+		    np.savetxt(fname=path + '/crashes_' + str(i) + '.csv',
+		               X=crashes,
+		               delimiter=',',
+		               header=header)
+
+Then add the following code to the runner file:
+::
+	with tf.Session() as sess:
+	    # Run the experiment
+	    algo.train(sess=sess)
+
+	    # Write out the episode results
+	    header = 'trial, step, ' + 'v_x_car, v_y_car, x_car, y_car, '
+	    for i in range(0,args.num_peds):
+		header += 'v_x_ped_' + str(i) + ','
+		header += 'v_y_ped_' + str(i) + ','
+		header += 'x_ped_' + str(i) + ','
+		header += 'y_ped_' + str(i) + ','
+
+	    for i in range(0,args.num_peds):
+		header += 'a_x_'  + str(i) + ','
+		header += 'a_y_' + str(i) + ','
+		header += 'noise_v_x_' + str(i) + ','
+		header += 'noise_v_y_' + str(i) + ','
+		header += 'noise_x_' + str(i) + ','
+		header += 'noise_y_' + str(i) + ','
+
+	    header += 'reward'
+	    save_trials(args.iters, args.log_dir, header, sess, save_every_n=args.snapshot_gap)
 
 6 Running the Example
 =====================
