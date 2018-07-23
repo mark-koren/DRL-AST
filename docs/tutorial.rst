@@ -583,7 +583,7 @@ Now we are ready to calculate the reward. The ``give_reward`` function takes in 
 4 Creating a Runner
 ===================
 
-The backend framework handling the policy definition and optimization is a package called RLLAB. The project is open-source, so if you would like to understand more about what RLLAB is doing please see the documentation here. 
+This section explains how to create a file to run the experiment we have been creating. This will use all of the example files we have created, and interface them with the a package for handling RL. The backend framework handling the policy definition and optimization is a package called RLLAB. The project is open-source, so if you would like to understand more about what RLLAB is doing please see the documentation here. 
 
 5 Creating the Spaces
 =====================
