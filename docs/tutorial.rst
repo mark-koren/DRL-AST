@@ -583,12 +583,137 @@ Now we are ready to calculate the reward. The ``give_reward`` function takes in 
 4 Creating the Spaces
 =====================
 
+This section shows how to create the action space and observation space for rllab to use. The spaces define the limits of what is possible for inputs to and outputs from the policy. The observation space can be used as input if the simulation state is accesible, and can be used to generate intial conditions if they are being sampled from a range. The action space is the output, and controls the size of the output array from the policy. 
+
+4.1 Inheriting the Base Spaces
+------------------------------
+
+Create a file named ``example_av_spaces.py`` in the ``spaces`` folder. Create a class titled ``ExampleAVSpaces`` which inherits from ``ASTSpaces``:
+::
+	from mylab.spaces.ast_spaces import ASTSpaces
+	from rllab.spaces import Box
+	import numpy as np
+
+	class ExampleAVSpaces(ASTSpaces):
+
+The base spaces don't take any input, but there are two functions to define: ``action_space`` and ``observation_space``. Both of these functions should return an object that inherits from the ''Space'' class, imported from ``rllab.spaces.base``. There are a few options, and you can implement your own, but the ``Box`` class is used here. A ``Box`` is defined by two arrays, ``low`` and ``high``, of equal length, which specifiy the minium and maximum value of each position in the array. The space is then allows any continuos number between the low and high values.
+
+4.2 Initializing the Spaces
+---------------------------
+
+In order to define our spaces, there are a number of inputs:
+
+* **num\_peds**: The number of pedestrians in the scenario
+* **max\_path\_length**: The horizon of the trajectory rollout, in number of timesteps
+* **v_des**: The desired velocity of the SUT
+* **x\_accel\_low**: The minimum acceleration in the x-direction of the pedestrian
+* **y\_accel\_low**: The minimum acceleration in the y-direction of the pedestrian
+* **x\_accel\_high**: The maximum acceleration in the x-direction of the pedestrian
+* **y\_accel\_high**: The maximum acceleration in the y-direction of the pedestrian
+* **x\_boundary\_low**: The minimum x-position of the pedestrian
+* **y\_boundary\_low**: The minimum y-position of the pedestrian
+* **x\_boundary\_high**: The maximum x-position of the pedestrian
+* **y\_boundary\_high**: The maximum y-position of the pedestrian
+* **x\_v\_low**:: The minimum initial x-velocity of the pedestrian
+* **y\_v\_low**:: The minimum initial y-velocity of the pedestrian
+* **x\_v\_high**:: The maximum initial x-velocity of the pedestrian
+* **y\_v\_high**:: The maximum initial y-velocity of the pedestrian
+* **car\_init\_x**: The initial x-position of the SUT
+* **car\_init\_y**: The initial y-position of the SUT
+
+The initialization code is below:
+::
+    def __init__(self,
+                 num_peds=1,
+                 max_path_length = 50,
+                 v_des=11.17,
+                 x_accel_low=-1.0,
+                 y_accel_low=-1.0,
+                 x_accel_high=1.0,
+                 y_accel_high=1.0,
+                 x_boundary_low=-10.0,
+                 y_boundary_low=-10.0,
+                 x_boundary_high=10.0,
+                 y_boundary_high=10.0,
+                 x_v_low=-10.0,
+                 y_v_low=-10.0,
+                 x_v_high=10.0,
+                 y_v_high=10.0,
+                 car_init_x=35.0,
+                 car_init_y=0.0,):
+
+        # Constant hyper-params -- set by user
+        self.c_num_peds = num_peds
+        self.c_max_path_length = max_path_length
+        self.c_v_des = v_des
+        self.c_x_accel_low = x_accel_low
+        self.c_y_accel_low = y_accel_low
+        self.c_x_accel_high = x_accel_high
+        self.c_y_accel_high = y_accel_high
+        self.c_x_boundary_low = x_boundary_low
+        self.c_y_boundary_low = y_boundary_low
+        self.c_x_boundary_high = x_boundary_high
+        self.c_y_boundary_high = y_boundary_high
+        self.c_x_v_low = x_v_low
+        self.c_y_v_low = y_v_low
+        self.c_x_v_high = x_v_high
+        self.c_y_v_high = y_v_high
+        self.c_car_init_x = car_init_x
+        self.c_car_init_y = car_init_y
+
+        super().__init__()
+
 4.1 The Action Space
 --------------------
+
+The ``action_space`` function takes no inputs and returns a child of the ``Space`` class. The length of the action space array determines the output dimension of the policy. Note the ``@Property`` decorator in the code below:
+::
+    @property
+    def action_space(self):
+        """
+        Returns a Space object
+        """
+        low = np.array([self.c_x_accel_low, self.c_y_accel_low, 0.0, 0.0, 0.0, 0.0])
+        high = np.array([self.c_x_accel_high, self.c_y_accel_high, 1.0, 1.0, 1.0, 1.0])
+
+        for i in range(1, self.c_num_peds):
+            low = np.hstack((low, np.array([self.c_x_accel_low, self.c_y_accel_low, 0.0, 0.0, 0.0, 0.0])))
+            high = np.hstack((high, np.array([self.c_x_accel_high, self.c_y_accel_high, 1.0, 1.0, 1.0, 1.0])))
+
+        return Box(low=low, high=high)
 
 4.2 The Observation Space
 -------------------------
 
+The ``observation_space`` function takes no inputs and returns a child of the ``Space`` class. If the simulation state is accesible, the ranges of possible values should be defined using this function, which determines the expected input shape to the policy. If initial conditions are sampled, the will be sampled from the observation space. Therefore, the observation space should define the maximum and minimum value of every simulation state that will be passed as input to the policy, as well as a value for every initial condition needed to specify a scenario variation. Note the ``@Property`` decorator in the code below:
+::
+    @property
+    def observation_space(self):
+        """
+        Returns a Space object
+        """
+
+        low = np.array([self.c_x_v_low, self.c_y_v_low, self.c_x_boundary_low, self.c_y_boundary_low])
+        high = np.array([self.c_x_v_high, self.c_y_v_high, self.c_x_boundary_high, self.c_y_boundary_high])
+
+        for i in range(1, self.c_num_peds):
+            low = np.hstack(
+                (low, np.array([self.c_x_v_low, self.c_y_v_low, self.c_x_boundary_low, self.c_y_boundary_low])))
+            high = np.hstack(
+                (high, np.array([self.c_x_v_high, self.c_y_v_high, self.c_x_boundary_high, self.c_y_boundary_high])))
+
+        if self.action_only:
+            low = self.low_start_bounds[:self.c_num_peds * 2]
+            low = low + np.ndarray.tolist(0.0 * np.array(self.v_start))[:self.c_num_peds]
+            low = low + [0.75 * self.c_v_des]
+            low = low + [0.75 * self.c_car_init_x]
+            high = self.high_start_bounds[:self.c_num_peds * 2]
+            high = high + np.ndarray.tolist(2.0 * np.array(self.v_start))[:self.c_num_peds]
+            high = high + [1.25 * self.c_v_des]
+            high = high + [1.25 * self.c_car_init_x]
+
+        # pdb.set_trace()
+        return Box(low=np.array(low), high=np.array(high))
 5 Creating a Runner
 ===================
 
