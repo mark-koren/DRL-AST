@@ -580,10 +580,14 @@ Now we are ready to calculate the reward. The ``give_reward`` function takes in 
 
 .. _section 2.7: the-get-reward-info-function_
 
+.. _creating-the-spaces:
+
 4 Creating the Spaces
 =====================
 
 This section shows how to create the action space and observation space for rllab to use. The spaces define the limits of what is possible for inputs to and outputs from the policy. The observation space can be used as input if the simulation state is accesible, and can be used to generate intial conditions if they are being sampled from a range. The action space is the output, and controls the size of the output array from the policy. 
+
+.. _inheriting-the-base-spaces:
 
 4.1 Inheriting the Base Spaces
 ------------------------------
@@ -597,6 +601,8 @@ Create a file named ``example_av_spaces.py`` in the ``spaces`` folder. Create a 
 	class ExampleAVSpaces(ASTSpaces):
 
 The base spaces don't take any input, but there are two functions to define: ``action_space`` and ``observation_space``. Both of these functions should return an object that inherits from the ''Space'' class, imported from ``rllab.spaces.base``. There are a few options, and you can implement your own, but the ``Box`` class is used here. A ``Box`` is defined by two arrays, ``low`` and ``high``, of equal length, which specifiy the minium and maximum value of each position in the array. The space is then allows any continuos number between the low and high values.
+
+.. _initializing-the-spaces:
 
 4.2 Initializing the Spaces
 ---------------------------
@@ -663,7 +669,9 @@ The initialization code is below:
 
         super().__init__()
 
-4.1 The Action Space
+.. _the-action-space:
+
+4.3 The Action Space
 --------------------
 
 The ``action_space`` function takes no inputs and returns a child of the ``Space`` class. The length of the action space array determines the output dimension of the policy. Note the ``@Property`` decorator in the code below:
@@ -682,7 +690,9 @@ The ``action_space`` function takes no inputs and returns a child of the ``Space
 
         return Box(low=low, high=high)
 
-4.2 The Observation Space
+.. _the-observation-space:
+
+4.4 The Observation Space
 -------------------------
 
 The ``observation_space`` function takes no inputs and returns a child of the ``Space`` class. If the simulation state is accesible, the ranges of possible values should be defined using this function, which determines the expected input shape to the policy. If initial conditions are sampled, the will be sampled from the observation space. Therefore, the observation space should define the maximum and minimum value of every simulation state that will be passed as input to the policy, as well as a value for every initial condition needed to specify a scenario variation. Note the ``@Property`` decorator in the code below:
@@ -714,10 +724,15 @@ The ``observation_space`` function takes no inputs and returns a child of the ``
 
         # pdb.set_trace()
         return Box(low=np.array(low), high=np.array(high))
+
+.. _creating-a-runner:
+
 5 Creating a Runner
 ===================
 
 This section explains how to create a file to run the experiment we have been creating. This will use all of the example files we have created, and interface them with the a package for handling RL. The backend framework handling the policy definition and optimization is a package called RLLAB. The project is open-source, so if you would like to understand more about what RLLAB is doing please see the documentation here. 
+
+.. _setting-up-the-runners:
 
 5.1 Setting Up the Runners
 --------------------------
@@ -747,6 +762,8 @@ Create a file called ``example_runner.py`` in your working directory. Add the fo
 	import argparse
 	from save_trials import *
 	import tensorflow as tf
+
+.. _creating-a-logger:
 
 5.2 Creating a Logger
 ---------------------
@@ -794,6 +811,8 @@ The code for defning these flags, as well as using them to create the logger, is
 	logger.set_log_tabular_only(args.log_tabular_only)
 	logger.push_prefix("[%s] " % args.exp_name)
 
+.. _specifying-the-experiment:
+
 5.3 Specifying the Experiment
 -----------------------------
 
@@ -834,6 +853,8 @@ All of the classes imported earlier will now be used to specify the experiment. 
 	    sampler_cls=sampler_cls,
 	    sampler_args={"sim": sim,
 		          "reward_function": reward_function})
+
+.. _running-the-experiment:
 
 5.4 Running the Experiment
 --------------------------
