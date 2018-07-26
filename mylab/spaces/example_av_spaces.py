@@ -20,7 +20,9 @@ class ExampleAVSpaces(ASTSpaces):
                  x_v_high=10.0,
                  y_v_high=10.0,
                  car_init_x=35.0,
-                 car_init_y=0.0,):
+                 car_init_y=0.0,
+                 action_only = True,
+                 ):
 
         # Constant hyper-params -- set by user
         self.c_num_peds = num_peds
@@ -40,7 +42,10 @@ class ExampleAVSpaces(ASTSpaces):
         self.c_y_v_high = y_v_high
         self.c_car_init_x = car_init_x
         self.c_car_init_y = car_init_y
-
+        self.action_only = action_only
+        self.low_start_bounds = [-1.0, -4.25, -1.0, 5.0, 0.0, -6.0, 0.0, 5.0]
+        self.high_start_bounds = [0.0, -3.75, 0.0, 9.0, 1.0, -2.0, 1.0, 9.0]
+        self.v_start = [1.0, -1.0, 1.0, -1.0]
         super().__init__()
 
     @property

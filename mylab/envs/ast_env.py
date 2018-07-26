@@ -64,7 +64,9 @@ class ASTEnv(Env):
         if self.simulator.is_goal():
             self._done = True
         # Calculate the reward for this step
-        self._reward = self.reward_function.give_reward(self._action, self.simulator.get_reward_info())
+        self._reward = self.reward_function.give_reward(
+            action=self._action,
+            info=self.simulator.get_reward_info())
         # Update instance attributes
         # self.log()
         # if self._step == self.c_max_path_length - 1:
@@ -100,7 +102,7 @@ class ASTEnv(Env):
         """
         Returns a Space object
         """
-        return self.spaces.action
+        return self.spaces.action_space
 
     @property
     def observation_space(self):

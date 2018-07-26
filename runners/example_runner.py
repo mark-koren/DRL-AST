@@ -32,6 +32,7 @@ parser.add_argument('--snapshot_mode', type=str, default="gap")
 parser.add_argument('--snapshot_gap', type=int, default=10)
 parser.add_argument('--log_tabular_only', type=bool, default=False)
 parser.add_argument('--log_dir', type=str, default='.')
+parser.add_argument('--args_data', type=str, default=None)
 args = parser.parse_args()
 
 # Create the logger
@@ -80,7 +81,7 @@ algo = TRPO(
     baseline=LinearFeatureBaseline(env_spec=env.spec),
     batch_size=4000,
     step_size=0.1,
-    n_itr=101,
+    n_itr=1,
     store_paths=True,
     optimizer=ConjugateGradientOptimizer(hvp_approach=FiniteDifferenceHvp(base_eps=1e-5)),
     max_path_length=50,

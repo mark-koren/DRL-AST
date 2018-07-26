@@ -11,8 +11,8 @@ from rllab.sampler.stateful_pool import ProgBarCounter
 import rllab.misc.logger as logger
 import itertools
 import pdb
-from simulators.example_av_simulator import ExampleAVSimulator
-from mylab.example_av_reward import ExampleAVReward
+from mylab.simulators.example_av_simulator import ExampleAVSimulator
+from mylab.rewards.example_av_reward import ExampleAVReward
 
 class ASTVectorizedSampler(VectorizedSampler):
     def __init__(self, algo, interactive = False, sim = ExampleAVSimulator(), reward_function = ExampleAVReward()):
