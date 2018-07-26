@@ -95,13 +95,13 @@ with tf.Session() as sess:
 
     # Write out the episode results
     header = 'trial, step, ' + 'v_x_car, v_y_car, x_car, y_car, '
-    for i in range(0,args.num_peds):
+    for i in range(0,sim.c_num_peds):
         header += 'v_x_ped_' + str(i) + ','
         header += 'v_y_ped_' + str(i) + ','
         header += 'x_ped_' + str(i) + ','
         header += 'y_ped_' + str(i) + ','
 
-    for i in range(0,args.num_peds):
+    for i in range(0,sim.c_num_peds):
         header += 'a_x_'  + str(i) + ','
         header += 'a_y_' + str(i) + ','
         header += 'noise_v_x_' + str(i) + ','
@@ -110,6 +110,6 @@ with tf.Session() as sess:
         header += 'noise_y_' + str(i) + ','
 
     header += 'reward'
-    save_trials(args.iters, args.log_dir, header, sess, save_every_n=args.snapshot_gap)
+    save_trials(algo.n_itr, args.log_dir, header, sess, save_every_n=args.snapshot_gap)
 
 
