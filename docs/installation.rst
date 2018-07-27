@@ -11,5 +11,20 @@ If you have already cloned the repo, you can run the following command to downlo
 	cd <Path-To-DRL-AST>/DRL-AST
 	git submodule update --init --recursive
 
+Create the Anaconda environment by running the following command from the top-level directory:
+::
+	conda env create -f environment.yml
 
+Once the environment has been created, activate it by running:
+::
+	source activate DRL-AST
 
+More information on Anaconda environments can be found in their documentation. Finally, add rllab to your ``PYTHONPATH`` like shown below:
+::
+	export PYTHONPATH=$PYTHONPATH:<Path-To-Install>/DRL-AST/rllab
+
+To validate your installation, please run the following:
+::
+	python validate_install.py
+
+You should see the method run for a single iteration, then print out a success message. You are now able to run this package. For more information on how to interface this package with your work, please see the tutorial.
