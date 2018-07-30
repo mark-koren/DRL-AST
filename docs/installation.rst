@@ -25,6 +25,6 @@ More information on Anaconda environments can be found in their documentation. F
 
 To validate your installation, please run the following:
 ::
-	python validate_install.py
+	python runners/validate_install.py
 
 You should see the method run for a single iteration, then print out a success message. You are now able to run this package. For more information on how to interface this package with your work, please see the tutorial.

@@ -19,7 +19,7 @@ import rllab.misc.logger as logger
 # Useful imports
 import os.path as osp
 import argparse
-from save_trials import *
+from example_save_trials import *
 import tensorflow as tf
 
 # Logger Params
@@ -110,6 +110,6 @@ with tf.Session() as sess:
         header += 'noise_y_' + str(i) + ','
 
     header += 'reward'
-    save_trials(algo.n_itr, args.log_dir, header, sess, save_every_n=args.snapshot_gap)
+    example_save_trials(algo.n_itr, args.log_dir, header, sess, save_every_n=args.snapshot_gap)
 
 
