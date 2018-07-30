@@ -936,7 +936,7 @@ Since everything has been configured already in the runner file, running the exa
 ::
 	mkdir data
 	mkdir data/example_results
-	python runners/example_runner.py --log_dir <Path-To-DRL-AST>/DRL-ASTdata/example_results
+	python runners/example_runner.py --log_dir <Path-To-DRL-AST>/DRL-AST/data/example_results
 
 Here we are creating a new directory for the logging results, and passing that to the example runner. The program should run for 101 iterations, unless you have changed it. This may take some time! Afterwards, the ``example_results`` directory should contain the following files:
 
@@ -986,3 +986,33 @@ Whille rllab creates some logging output through its internal logger, that may n
 		               header=header)
 
 Here we are grabbing simulation state information, like the postion and velocities of the car and pedestrian, as well as the pedestrian accelerations, noise on the sensors, and the reward at each step. Every trial is saved to the ``trial_<#>.csv`` file, while only trajectories that end in a collsion are saved to ``crashes_<#>.csv``. These files are useful for visulazing trajectories or analyzing why a collision is occuring. 
+
+6.3 Example Output
+------------------
+As you run the program, rllab will output optimization updates to the terminal. When the method runs iteration 100, you should see something that looks like this:
+::
+	| -----------------------  ----------------
+	| PolicyExecTime                0.138965
+	| EnvExecTime                   0.471907
+	| ProcessExecTime               0.0285957
+	| Iteration                   100
+	| AverageDiscountedReturn    -897.273
+	| AverageReturn             -1437.22
+	| ExplainedVariance             0.136119
+	| NumTrajs                     80
+	| Entropy                       8.22841
+	| Perplexity                 3745.86
+	| StdReturn                  4448.98
+	| MaxReturn                  -102.079
+	| MinReturn                -24631
+	| LossBefore                   -5.66416e-05
+	| LossAfter                    -0.0234421
+	| MeanKLBefore                  0.0725254
+	| MeanKL                        0.0915881
+	| dLoss                         0.0233855
+	| Time                        857.771
+	| ItrTime                       8.16877
+	| -----------------------  ----------------
+
+If everything works right, the max return in the last several iterations should be around -100. If you got particularly lucky, the average return may be close to that as well. For your own projects, these number may be very different, depending on your reward function. 
+
