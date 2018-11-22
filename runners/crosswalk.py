@@ -24,9 +24,9 @@ from save_trials import *
 import pdb
 import tensorflow as tf
 
-from simulators.example_av_simulator import ExampleAVSimulator
-from mylab.example_av_reward import ExampleAVReward
-from mylab.ast_env import ASTEnv
+from mylab.simulators.example_av_simulator import ExampleAVSimulator
+from mylab.rewards.example_av_reward import ExampleAVReward
+from mylab.envs.ast_env import ASTEnv
 from mylab.ast_vectorized_sampler import ASTVectorizedSampler
 
 parser = argparse.ArgumentParser()
